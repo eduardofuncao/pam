@@ -195,6 +195,14 @@ type Connection struct {
 	Queries            map[string]string `yaml:"queries"`
 }
 
+type Style struct {
+	Accent string `yaml:"accent_color"`
+}
+
+type History struct {
+	Size int `yaml:"size"`
+}
+
 type Config struct {
 	Current struct {
 		Name               string `yaml:"name"`
@@ -202,6 +210,8 @@ type Config struct {
 		DBConnectionString string `yaml:"db_connection_string"`
 	} `yaml:"current"`
 	Connections map[string]Connection `yaml:"connections"`
+	Style Style `yaml:"style"`
+	History History `yaml:"history"`
 }
 
 func loadConfig(path string) (*Config, error) {

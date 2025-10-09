@@ -45,7 +45,7 @@ var (
 			Foreground(lipgloss.Color("238"))
 
 	copiedBlinkStyle = lipgloss.NewStyle().
-				Background(lipgloss.Color("62")). // Pink background
+				Background(lipgloss.Color("62")).
 				Foreground(lipgloss.Color("205")).
 				Bold(true)
 )
