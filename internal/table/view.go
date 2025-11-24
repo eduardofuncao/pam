@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 func (m Model) View() string {
@@ -107,8 +108,10 @@ func (m Model) getCellStyle(row, col int) lipgloss.Style {
 }
 
 func formatCell(content string) string {
-	if len(content) > cellWidth {
-		return content[:cellWidth-1] + "…"
+	width := runewidth.StringWidth(content)
+	if width > cellWidth {
+		return runewidth.Truncate(content, cellWidth, "…")
 	}
-	return fmt.Sprintf("%-*s", cellWidth, content)
+	padding := cellWidth - width
+	return content + strings.Repeat(" ", padding)
 }

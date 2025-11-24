@@ -7,7 +7,12 @@ import (
 	"github.com/eduardofuncao/pam/internal/db"
 )
 
-const cellWidth = 15
+const (
+	cellWidth         = 15 // Width of each table cell in characters
+	columnSeparator   = 1  // Width of the border separator between columns
+	horizontalPadding = 2  // Padding for left/right table borders
+	verticalReserved  = 9  // Reserved vertical space for header/footer
+)
 
 type Model struct {
 	width           int
