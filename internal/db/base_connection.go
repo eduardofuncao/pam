@@ -19,7 +19,10 @@ func (b *BaseConnection) Close() error {
 	return errors.New("Close() not implemented for base connection")
 }
 func (b *BaseConnection) Query(name string, args ...any) (any, error) {
-	return struct{}{}, errors.New("Close() not implemented for base connection")
+	return struct{}{}, errors.New("Query() not implemented for base connection")
+}
+func (b *BaseConnection) QueryDirect(sql string, args ...any) (any, error) {
+	return struct{}{}, errors.New("QueryDirect() not implemented for base connection")
 }
 
 func (b *BaseConnection) GetName() string                     { return b.Name }

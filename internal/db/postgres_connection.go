@@ -51,3 +51,7 @@ func (p *PostgresConnection) Query(queryName string, args ...any) (any, error) {
 	}
 	return p.db.Query(query.SQL, args...)
 }
+
+func (p *PostgresConnection) QueryDirect(sql string, args ...any) (any, error) {
+	return p.db.Query(sql, args...)
+}

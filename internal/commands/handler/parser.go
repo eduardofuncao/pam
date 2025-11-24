@@ -26,8 +26,8 @@ func Parse(cfg *config.Config) {
 		commands.Add(cfg)
 	case "remove", "delete":
 		commands.Remove(cfg)
-	case "query", "run":
-		commands.Query(cfg)
+	case "run", "query":
+		commands.Run(cfg)
 	case "list", "ls":
 		commands.List(cfg)
 	case "edit":

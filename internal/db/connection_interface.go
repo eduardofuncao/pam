@@ -5,6 +5,7 @@ type DatabaseConnection interface {
 	Ping() error
 	Close() error
 	Query(queryName string, args ...any) (any, error)
+	QueryDirect(sql string, args ...any) (any, error)
 
 	GetName() string
 	GetDbType() string
