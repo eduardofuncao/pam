@@ -169,12 +169,15 @@ func (m Model) copySelection() (Model, tea.Cmd) {
 	
 	content := result.String()
 	clipboard.WriteAll(content)
-	
+
 	m.visualMode = false
 	m.blinkCopiedCell = true
 
-	return m, func() tea.Msg {
-		time.Sleep(blinkDuration)
-		return blinkMsg{}
-	}
+	return m, tea.Batch(
+		m.setSuccess("Copied to clipboard!"),
+		func() tea.Msg {
+			time.Sleep(blinkDuration)
+			return blinkMsg{}
+		},
+	)
 }

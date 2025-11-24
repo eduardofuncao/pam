@@ -79,37 +79,55 @@ func (m Model) renderFooter() string {
 	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorError)).Bold(true)
 
 	edit := keyStyle.Render("e") + normalStyle.Render("dit")
+	del := keyStyle.Render("d") + normalStyle.Render("el")
 	yank := keyStyle.Render("y") + normalStyle.Render("ank")
+	cmd := keyStyle.Render(";") + normalStyle.Render("cmd")
 	quit := keyStyle.Render("q") + normalStyle.Render("uit")
 	nav := normalStyle.Render("hjkl: navigate")
 
 	cell := m.getCurrentCell()
 	colType := "?"
+	cellValue := ""
 	if cell != nil {
 		colType = cell.ColumnType
+		cellValue = cell.Value
 	}
 
-	var footer string
-	if m.statusMessage != "" {
+	// First line: confirm prompt OR command prompt OR column type + (status message OR cell content)
+	var firstLine string
+	if m.confirmMode {
+		promptStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+		firstLine = fmt.Sprintf("\n%s %s",
+			promptStyle.Render("Clear cell to NULL?"),
+			hintStyle.Render("[Enter] confirm  [Esc] cancel"))
+	} else if m.commandMode {
+		firstLine = fmt.Sprintf("\n%s", m.commandInput.View())
+	} else if m.statusMessage != "" {
 		statusStyle := successStyle
 		if m.isError {
 			statusStyle = errorStyle
 		}
-		footer = fmt.Sprintf("\n%s | %s | %s  %s  %s  %s",
-			colType,
-			statusStyle.Render(m.statusMessage),
-			edit, yank, quit, nav,
-		)
+		firstLine = fmt.Sprintf("\n%s  %s", colType, statusStyle.Render(m.statusMessage))
 	} else {
-		footer = fmt.Sprintf("\n%s | %d/%d rows, %d/%d cols | %s  %s  %s  %s",
-			colType,
-			m.selectedRow+1, m.numRows(),
-			m.selectedCol+1, m.numCols(),
-			edit, yank, quit, nav,
-		)
+		mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+		firstLine = fmt.Sprintf("\n%s  %s", colType, mutedStyle.Render(cellValue))
 	}
 
-	return footer
+	// Second line: coordinates + commands (always shown)
+	highlightStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorKeyHighlight))
+	whiteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+
+	positionStr := fmt.Sprintf("[%d,%d]", m.selectedRow+1, m.selectedCol+1)
+	sizeStr := fmt.Sprintf("of %d×%d", m.numRows(), m.numCols())
+
+	secondLine := fmt.Sprintf("%s %s | %s  %s  %s  %s  %s  %s",
+		highlightStyle.Render(positionStr),
+		whiteStyle.Render(sizeStr),
+		edit, del, yank, cmd, quit, nav,
+	)
+
+	return firstLine + "\n" + secondLine
 }
 
 func (m Model) getCellStyle(row, col int) lipgloss.Style {

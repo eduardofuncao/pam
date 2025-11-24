@@ -8,7 +8,11 @@ import (
 )
 
 func Render(tableData *db.TableData, elapsed time.Duration) error {
-	model := New(tableData, elapsed)
+	return RenderWithExecutor(tableData, elapsed, nil)
+}
+
+func RenderWithExecutor(tableData *db.TableData, elapsed time.Duration, cmdExec CommandExecutor) error {
+	model := New(tableData, elapsed, cmdExec)
 	p := tea.NewProgram(model)
 	_, err := p.Run()
 	return err

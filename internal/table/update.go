@@ -26,6 +26,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyPress(msg)
 	case blinkMsg:
 		m.blinkCopiedCell = false
+	case clearStatusMsg:
+		m.clearStatus()
+		return m, nil
 	case tea.WindowSizeMsg:
 		return m.handleWindowResize(msg), nil
 	}
@@ -34,21 +37,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle confirm mode keys
+	if m.confirmMode {
+		switch msg.Type {
+		case tea.KeyEscape, tea.KeyCtrlC:
+			m.confirmMode = false
+			m.confirmAction = ""
+			return m, nil
+		case tea.KeyEnter:
+			return m.executeConfirmAction()
+		default:
+			return m, nil
+		}
+	}
+
+	// Handle command mode keys
+	if m.commandMode {
+		switch msg.Type {
+		case tea.KeyEscape, tea.KeyCtrlC:
+			m.commandMode = false
+			m.commandInput.Reset()
+			return m, nil
+		case tea.KeyEnter:
+			return m.runCommand(m.commandInput.Value())
+		default:
+			var cmd tea.Cmd
+			m.commandInput, cmd = m.commandInput.Update(msg)
+			return m, cmd
+		}
+	}
+
+	// Normal mode keys
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 
+	case ";":
+		m.commandMode = true
+		m.commandInput.Focus()
+		return m, nil
+
 	case "up", "k":
-		m.statusMessage = ""
+		m.clearStatus()
 		return m.moveUp(), nil
 	case "down", "j":
-		m.statusMessage = ""
+		m.clearStatus()
 		return m.moveDown(), nil
 	case "left", "h":
-		m.statusMessage = ""
+		m.clearStatus()
 		return m.moveLeft(), nil
 	case "right", "l":
-		m.statusMessage = ""
+		m.clearStatus()
 		return m.moveRight(), nil
 
 	case "home", "0", "_":
@@ -68,11 +107,14 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "v":
 		return m.toggleVisualMode()
 
-	case "y", "enter":
+	case "y":
 		return m.copySelection()
 
 	case "e":
 		return m.editCell()
+
+	case "d":
+		return m.enterDeleteConfirm()
 	}
 
 	return m, nil
@@ -185,8 +227,7 @@ func (m Model) editCell() (tea.Model, tea.Cmd) {
 		oldValue = ""
 	}
 	if newValueStr == oldValue {
-		m.statusMessage = ""
-		m.isError = false
+		m.clearStatus()
 		return m, nil
 	}
 
@@ -194,9 +235,7 @@ func (m Model) editCell() (tea.Model, tea.Cmd) {
 
 	_, err = m.tableData.Connection.GetDB().Exec(updateSQL, args...)
 	if err != nil {
-		m.statusMessage = fmt.Sprintf(msgUpdateFailedFmt, err)
-		m.isError = true
-		return m, nil
+		return m, m.setError(fmt.Sprintf(msgUpdateFailedFmt, err))
 	}
 
 	if newValueStr == "" {
@@ -207,35 +246,21 @@ func (m Model) editCell() (tea.Model, tea.Cmd) {
 		m.tableData.Rows[cell.RowIndex][cell.ColumnIndex].RawValue = newValueStr
 	}
 
-	m.statusMessage = msgUpdateSuccess
-	m.isError = false
-
-	return m, nil
+	return m, m.setSuccess(msgUpdateSuccess)
 }
 
-func (m Model) buildUpdateQuery(cell *db.Cell, newValue string) (string, []any) {
+// buildRowFilter builds a WHERE clause using all columns in the row (except excludeCol if >= 0).
+// Returns the WHERE clause string and args, starting parameters at paramStart.
+func (m Model) buildRowFilter(rowIndex int, excludeCol int, paramStart int) (string, []any) {
 	var conditions []string
 	var args []any
-	paramIndex := 1
-
+	paramIndex := paramStart
 	dbType := m.tableData.Connection.GetDbType()
 
-	// Handle empty string as NULL
-	var setClause string
-	if newValue == "" {
-		setClause = fmt.Sprintf("%s = NULL", cell.ColumnName)
-	} else {
-		args = append(args, newValue)
-		setClause = fmt.Sprintf("%s = %s", cell.ColumnName, m.placeholder(dbType, paramIndex))
-		paramIndex++
-	}
-
-	// Build WHERE conditions using all other columns in the row
-	for _, c := range m.tableData.Rows[cell.RowIndex] {
-		if c.ColumnIndex == cell.ColumnIndex {
+	for _, c := range m.tableData.Rows[rowIndex] {
+		if c.ColumnIndex == excludeCol {
 			continue
 		}
-
 		if c.RawValue == nil {
 			conditions = append(conditions, fmt.Sprintf("%s IS NULL", c.ColumnName))
 		} else {
@@ -245,7 +270,26 @@ func (m Model) buildUpdateQuery(cell *db.Cell, newValue string) (string, []any) 
 		}
 	}
 
-	whereClause := strings.Join(conditions, " AND ")
+	return strings.Join(conditions, " AND "), args
+}
+
+func (m Model) buildUpdateQuery(cell *db.Cell, newValue string) (string, []any) {
+	dbType := m.tableData.Connection.GetDbType()
+
+	var setClause string
+	var setArgs []any
+	paramIndex := 1
+
+	if newValue == "" {
+		setClause = fmt.Sprintf("%s = NULL", cell.ColumnName)
+	} else {
+		setArgs = append(setArgs, newValue)
+		setClause = fmt.Sprintf("%s = %s", cell.ColumnName, m.placeholder(dbType, paramIndex))
+		paramIndex++
+	}
+
+	whereClause, whereArgs := m.buildRowFilter(cell.RowIndex, cell.ColumnIndex, paramIndex)
+	args := append(setArgs, whereArgs...)
 
 	sql := fmt.Sprintf("UPDATE %s SET %s WHERE %s",
 		m.tableData.TableName, setClause, whereClause)
@@ -262,4 +306,49 @@ func (m Model) placeholder(dbType string, index int) string {
 	default:
 		return "?"
 	}
+}
+
+func (m Model) enterDeleteConfirm() (tea.Model, tea.Cmd) {
+	if m.tableData == nil || m.tableData.TableName == "" {
+		return m, m.setError("Cannot delete: table name unknown")
+	}
+	cell := m.getCurrentCell()
+	if cell == nil {
+		return m, nil
+	}
+	m.confirmMode = true
+	m.confirmAction = "clear_cell"
+	return m, nil
+}
+
+func (m Model) executeConfirmAction() (tea.Model, tea.Cmd) {
+	m.confirmMode = false
+	action := m.confirmAction
+	m.confirmAction = ""
+
+	if action == "clear_cell" {
+		return m.clearCell()
+	}
+	return m, nil
+}
+
+func (m Model) clearCell() (tea.Model, tea.Cmd) {
+	cell := m.getCurrentCell()
+	if cell == nil || m.tableData.Connection == nil {
+		return m, nil
+	}
+
+	// Reuse buildUpdateQuery with empty string (which sets to NULL)
+	updateSQL, args := m.buildUpdateQuery(cell, "")
+
+	_, err := m.tableData.Connection.GetDB().Exec(updateSQL, args...)
+	if err != nil {
+		return m, m.setError(fmt.Sprintf("Clear failed: %v", err))
+	}
+
+	// Update local data
+	m.tableData.Rows[cell.RowIndex][cell.ColumnIndex].Value = "NULL"
+	m.tableData.Rows[cell.RowIndex][cell.ColumnIndex].RawValue = nil
+
+	return m, m.setSuccess("Cell cleared")
 }

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eduardofuncao/pam/internal/db"
 	"github.com/mattn/go-runewidth"
@@ -15,6 +16,8 @@ const (
 	horizontalPadding = 2  // Padding for left/right table borders
 	verticalReserved  = 9  // Reserved vertical space for header/footer
 )
+
+type CommandExecutor func(args []string) (*db.TableData, error)
 
 type Model struct {
 	width           int
@@ -34,20 +37,44 @@ type Model struct {
 	visualStartCol  int
 	statusMessage   string
 	isError         bool
+	commandMode     bool
+	commandInput    textinput.Model
+	queries         map[string]string
+	originalSQL     string
+	executeCommand  CommandExecutor
+	confirmMode     bool
+	confirmAction   string
 }
 
 type blinkMsg struct{}
 
-func New(tableData *db.TableData, elapsed time.Duration) Model {
+type clearStatusMsg struct{}
+
+func New(tableData *db.TableData, elapsed time.Duration, cmdExec CommandExecutor) Model {
+	ti := textinput.New()
+	ti.Placeholder = ""
+	ti.CharLimit = 500
+	ti.Width = 80
+
+	originalSQL := ""
+	if tableData != nil {
+		originalSQL = tableData.SQL
+	}
+
 	return Model{
-		selectedRow:  0,
-		selectedCol:  0,
-		offsetX:      0,
-		offsetY:      0,
-		tableData:    tableData,
-		elapsed:      elapsed,
-		visualMode:   false,
-		columnWidths: calculateColumnWidths(tableData),
+		selectedRow:     0,
+		selectedCol:     0,
+		offsetX:         0,
+		offsetY:         0,
+		tableData:       tableData,
+		elapsed:         elapsed,
+		visualMode:      false,
+		columnWidths:    calculateColumnWidths(tableData),
+		commandMode:     false,
+		commandInput:    ti,
+		queries:         make(map[string]string),
+		originalSQL:     originalSQL,
+		executeCommand:  cmdExec,
 	}
 }
 
@@ -81,6 +108,31 @@ func (m Model) getCell(row, col int) *db.Cell {
 
 func (m Model) getCurrentCell() *db.Cell {
 	return m.getCell(m.selectedRow, m.selectedCol)
+}
+
+// Status message helpers
+func (m *Model) setStatus(msg string, isError bool, autoClear bool) tea.Cmd {
+	m.statusMessage = msg
+	m.isError = isError
+	if autoClear {
+		return tea.Tick(1500*time.Millisecond, func(t time.Time) tea.Msg {
+			return clearStatusMsg{}
+		})
+	}
+	return nil
+}
+
+func (m *Model) setSuccess(msg string) tea.Cmd {
+	return m.setStatus(msg, false, true)
+}
+
+func (m *Model) setError(msg string) tea.Cmd {
+	return m.setStatus(msg, true, false)
+}
+
+func (m *Model) clearStatus() {
+	m.statusMessage = ""
+	m.isError = false
 }
 
 func getTypeMaxWidth(colType string) int {

@@ -6,71 +6,100 @@ import (
 	"github.com/DeprecatedLuar/gohelp-luar"
 )
 
-func PrintHelp() {
+func PrintHelp(topic string) {
+	switch topic {
+	case "":
+		printMainHelp()
+	case "tui":
+		printTUIHelp()
+	case "connections":
+		printConnectionsHelp()
+	default:
+		fmt.Printf("Unknown topic: %s\n\n", topic)
+		printAvailablePages()
+	}
+}
+
+func printMainHelp() {
 	gohelp.PrintHeader("Usage")
 	fmt.Println("  pam <command> [arguments]")
+
+	gohelp.PrintHeader("Database")
+	gohelp.Item("init <name> <engine> <conn>", "Create connection")
+	gohelp.Item("switch <name>", "Switch connection")
+	gohelp.Item("status", "Show current connection")
+
+	gohelp.PrintHeader("Queries")
+	gohelp.Item("add <name> [sql]", "Save a query")
+	gohelp.Item("remove <name>", "Delete a query")
+	gohelp.Item("run <name>", "Execute saved query")
+	gohelp.Item("run <name> -e", "Execute with editor")
+	gohelp.Item("run '<sql>'", "Execute raw SQL")
+
+	gohelp.PrintHeader("Browse")
+	gohelp.Item("list [queries|connections]", "List items")
+	gohelp.Item("explore [table]", "Browse tables/data")
+	gohelp.Item("conf", "Edit config in $EDITOR")
+
+	printAvailablePages()
+	gohelp.Separator()
+}
+
+func printAvailablePages() {
+	gohelp.PrintHeader("Help Pages")
+	gohelp.Item("help tui", "TUI navigation and command prompt")
+	gohelp.Item("help connections", "Connection string formats")
+	fmt.Println()
+}
+
+func printTUIHelp() {
+	gohelp.PrintHeader("Navigation")
+	gohelp.Item("hjkl / Arrows", "Move cursor")
+	gohelp.Item("g / G", "First / last row")
+	gohelp.Item("0 / $", "First / last column")
+	gohelp.Item("Ctrl+U / Ctrl+D", "Page up / down")
+	gohelp.Item("q", "Quit")
+
+	gohelp.PrintHeader("Actions")
+	gohelp.Item("v", "Toggle visual selection")
+	gohelp.Item("y", "Yank cell or selection")
+	gohelp.Item("e", "Edit cell (opens $EDITOR)")
+	gohelp.Item("d", "Clear cell to NULL (with confirm)")
+
+	gohelp.PrintHeader("Command Prompt")
+	fmt.Println("  Press ; to open the command prompt")
+	fmt.Println()
+	gohelp.Item("Esc", "Cancel prompt")
+	gohelp.Item("Enter", "Execute command")
+
+	gohelp.PrintHeader("SQL Expansion")
+	fmt.Println("  Commands auto-expand using current table:")
+	fmt.Println()
+	gohelp.Item("run SELECT *", "→ SELECT * FROM <table>")
+	gohelp.Item("run SELECT * WHERE id=1", "→ SELECT * FROM <table> WHERE id=1")
+	gohelp.Item("run DELETE WHERE id=1", "→ DELETE FROM <table> WHERE id=1")
+	gohelp.Item("run UPDATE SET x=1 WHERE y=2", "→ UPDATE <table> SET x=1 WHERE y=2")
 	fmt.Println()
 
-	gohelp.PrintHeader("Database Connection")
-	gohelp.Item("init <name> <engine> <conn-string>", "Initialize a new database connection")
-	gohelp.Item("switch <db-name>", "Switch to a different connection")
-	gohelp.Item("use <db-name>", "Alias for switch")
-	gohelp.Item("status", "Show current active connection")
-	fmt.Println()
+	gohelp.Separator()
+}
 
-	gohelp.PrintHeader("Query Management")
-	gohelp.Item("add <query-name> [sql]", "Add a saved query (opens editor if no SQL)")
-	gohelp.Item("save <query-name> [sql]", "Alias for add")
-	gohelp.Item("remove <query-name>", "Remove a saved query")
-	gohelp.Item("delete <query-name>", "Alias for remove")
-	fmt.Println()
-
-	gohelp.PrintHeader("Query Execution")
-	gohelp.Item("run <query-name>", "Execute a saved query")
-	gohelp.Item("run <query-name> -e", "Execute saved query with editor")
-	gohelp.Item("run -e", "Open empty editor for one-shot query")
-	gohelp.Item("run '<raw-sql>'", "Execute raw SQL directly (quotes required)")
-	gohelp.Item("query <query-name>", "Alias for run")
-	fmt.Println()
-
-	gohelp.PrintHeader("Listing & Inspection")
-	gohelp.Item("list", "List saved queries (default)")
-	gohelp.Item("list queries", "List all saved queries for current connection")
-	gohelp.Item("list connections", "List all database connections")
-	gohelp.Item("list tables", "List all tables in current database")
-	gohelp.Item("explore [table]", "Quick table browser (shows tables or SELECT * LIMIT 1000)")
-	gohelp.Item("explore <table> --limit N", "Explore table with custom row limit")
-	gohelp.Item("ls", "Alias for list")
-	fmt.Println()
-
-	gohelp.PrintHeader("Configuration")
-	gohelp.Item("edit", "Edit config file in $EDITOR")
-	gohelp.Item("edit config", "Edit config file directly")
-	gohelp.Item("edit queries", "Edit queries as SQL file")
-	fmt.Println()
-
-	gohelp.PrintHeader("Database Engines")
-	gohelp.Item("sqlite3", "SQLite database")
-	gohelp.Item("postgres", "PostgreSQL database")
-	gohelp.Item("mysql", "MySQL database")
-	gohelp.Item("oracle", "Oracle database (via godror)")
-	fmt.Println()
-
-	gohelp.PrintHeader("Table Viewer Controls")
-	gohelp.Item("Arrow keys / hjkl", "Navigate cells")
-	gohelp.Item("Home/End / g/G", "Jump to start/end")
-	gohelp.Item("c", "Copy cell value to clipboard")
-	gohelp.Item("q / Ctrl+C", "Quit viewer")
-	fmt.Println()
-
-	gohelp.PrintHeader("Examples")
+func printConnectionsHelp() {
+	gohelp.PrintHeader("SQLite")
 	fmt.Println("  pam init mydb sqlite3 ./data.db")
-	fmt.Println("  pam add users 'SELECT * FROM users'")
-	fmt.Println("  pam run users")
-	fmt.Println("  pam run users -e")
-	fmt.Println("  pam run 'SELECT * FROM users WHERE id = 5'")
-	fmt.Println("  pam explore users")
-	fmt.Println("  pam explore users --limit 50")
+	fmt.Println("  pam init mydb sqlite3 /absolute/path/to/db.sqlite")
+
+	gohelp.PrintHeader("PostgreSQL")
+	fmt.Println("  pam init mydb postgres \"host=localhost port=5432 dbname=mydb sslmode=disable\"")
+	fmt.Println("  pam init mydb postgres \"postgres://user:pass@localhost/dbname?sslmode=disable\"")
+
+	gohelp.PrintHeader("MySQL")
+	fmt.Println("  pam init mydb mysql \"user:pass@tcp(localhost:3306)/dbname\"")
+	fmt.Println("  pam init mydb mysql \"user:pass@unix(/var/run/mysqld/mysqld.sock)/dbname\"")
+
+	gohelp.PrintHeader("Oracle")
+	fmt.Println("  pam init mydb oracle \"user/pass@localhost:1521/service\"")
+	fmt.Println("  pam init mydb oracle 'user/pass@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=orcl)))'")
 	fmt.Println()
 
 	gohelp.Separator()
