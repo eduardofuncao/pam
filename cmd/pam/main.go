@@ -3,6 +3,10 @@ package main
 import (
 	"log"
 
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/eduardofuncao/pam/internal/commands/handler"
 	"github.com/eduardofuncao/pam/internal/config"
 )
 
@@ -12,6 +16,5 @@ func main() {
 		log.Fatal("Could not load config file", err)
 	}
 
-	app := NewApp(cfg)
-	app.Run()
+	handler.Parse(cfg)
 }

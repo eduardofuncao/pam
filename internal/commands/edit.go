@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	"fmt"
@@ -11,7 +11,28 @@ import (
 	"github.com/eduardofuncao/pam/internal/db"
 )
 
-func (a *App) editConfig(editorCmd string) {
+func Edit(cfg *config.Config) {
+	editorCmd := os.Getenv("EDITOR")
+	if editorCmd == "" {
+		editorCmd = "vim"
+	}
+
+	editType := "config"
+	if len(os.Args) >= 3 {
+		editType = os.Args[2]
+	}
+
+	switch editType {
+	case "config":
+		editConfig(cfg, editorCmd)
+	case "queries":
+		editQueries(cfg, editorCmd)
+	default:
+		log.Fatalf("Unknown edit type: %s. Use 'config', 'queries'", editType)
+	}
+}
+
+func editConfig(cfg *config.Config, editorCmd string) {
 	cmd := exec.Command(editorCmd, config.CfgFile)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -20,22 +41,22 @@ func (a *App) editConfig(editorCmd string) {
 		log.Fatalf("Failed to open editor: %v", err)
 	}
 
-	cfg, err := config.LoadConfig(config.CfgFile)
+	newCfg, err := config.LoadConfig(config.CfgFile)
 	if err != nil {
 		log.Printf("Warning: Could not reload config: %v", err)
 	} else {
-		a.config = cfg
+		*cfg = *newCfg
 	}
 }
 
-func (a *App) editQueries(editorCmd string) {
-	if a.config.CurrentConnection == "" {
+func editQueries(cfg *config.Config, editorCmd string) {
+	if cfg.CurrentConnection == "" {
 		log.Fatal("No active connection. Use 'pam switch <connection>' first")
 	}
 
-	conn, ok := a.config.Connections[a.config.CurrentConnection]
+	conn, ok := cfg.Connections[cfg.CurrentConnection]
 	if !ok {
-		log.Fatalf("Connection %s not found", a.config.CurrentConnection)
+		log.Fatalf("Connection %s not found", cfg.CurrentConnection)
 	}
 
 	tmpFile, err := os.CreateTemp("", "pam-queries-*.sql")
@@ -46,8 +67,8 @@ func (a *App) editQueries(editorCmd string) {
 	defer os.Remove(tmpPath)
 
 	var content strings.Builder
-	content.WriteString(fmt.Sprintf("-- Editing queries for connection: %s (%s)\n", 
-		a.config.CurrentConnection, conn.DBType))
+	content.WriteString(fmt.Sprintf("-- Editing queries for connection: %s (%s)\n",
+		cfg.CurrentConnection, conn.DBType))
 	content.WriteString("-- Format: -- queryname\n")
 	content.WriteString("--         SQL query here\n")
 	content.WriteString("-- Save and close to update\n\n")
@@ -82,22 +103,19 @@ func (a *App) editQueries(editorCmd string) {
 	}
 
 	conn.Queries = editedQueries
-	a.config.Connections[a.config.CurrentConnection] = conn
+	cfg.Connections[cfg.CurrentConnection] = conn
 
-	if err := a.config.Save(); err != nil {
+	if err := cfg.Save(); err != nil {
 		log.Fatalf("Failed to save config: %v", err)
 	}
 
-	fmt.Printf("✓ Updated queries for connection: %s\n", a.config.CurrentConnection)
+	fmt.Printf("✓ Updated queries for connection: %s\n", cfg.CurrentConnection)
 }
 
-// parseSQLQueriesFile parses a SQL file with the format:
-// -- queryname
-// SQL query here
 func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
 	queries := make(map[string]db.Query)
 	lines := strings.Split(content, "\n")
-	
+
 	var currentQueryName string
 	var currentSQL strings.Builder
 	queryID := 0
@@ -115,11 +133,11 @@ func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
 
 		if strings.HasPrefix(trimmed, "--") {
 			comment := strings.TrimSpace(strings.TrimPrefix(trimmed, "--"))
-			
-			if strings.HasPrefix(comment, "Editing queries") || 
-			   strings.HasPrefix(comment, "Format:") ||
-			   strings.HasPrefix(comment, "SQL query") ||
-			   strings.HasPrefix(comment, "Save and close") {
+
+			if strings.HasPrefix(comment, "Editing queries") ||
+				strings.HasPrefix(comment, "Format:") ||
+				strings.HasPrefix(comment, "SQL query") ||
+				strings.HasPrefix(comment, "Save and close") {
 				continue
 			}
 
@@ -138,7 +156,6 @@ func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
 
 			currentQueryName = comment
 		} else if currentQueryName != "" {
-			// Add line to current query SQL
 			if currentSQL.Len() > 0 {
 				currentSQL.WriteString("\n")
 			}
@@ -158,19 +175,4 @@ func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
 	}
 
 	return queries, nil
-}
-
-func removeCommentLines(content string) string {
-	lines := strings.Split(content, "\n")
-	var result strings.Builder
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "--") {
-			result.WriteString(line)
-			result.WriteString("\n")
-		}
-	}
-
-	return result.String()
 }
