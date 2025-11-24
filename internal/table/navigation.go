@@ -8,6 +8,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+const (
+	blinkDuration = 200 * time.Millisecond
+)
+
 func (m Model) moveUp() Model {
 	if m.selectedRow > 0 {
 		m.selectedRow--
@@ -146,17 +150,17 @@ func (m Model) copySelection() (Model, tea.Cmd) {
 			if col > minCol {
 				result.WriteString("\t")
 			}
-			result.WriteString(m.columns[col])
+			result.WriteString(m.tableData.Columns[col])
 		}
 		result.WriteString("\n")
 	}
-	
+
 	for row := minRow; row <= maxRow; row++ {
 		for col := minCol; col <= maxCol; col++ {
 			if col > minCol {
 				result.WriteString("\t")
 			}
-			result.WriteString(m.data[row][col])
+			result.WriteString(m.tableData.Rows[row][col].Value)
 		}
 		if row < maxRow {
 			result.WriteString("\n")
@@ -165,12 +169,15 @@ func (m Model) copySelection() (Model, tea.Cmd) {
 	
 	content := result.String()
 	clipboard.WriteAll(content)
-	
+
 	m.visualMode = false
 	m.blinkCopiedCell = true
-	
-	return m, func() tea.Msg {
-		time.Sleep(200 * time.Millisecond)
-		return blinkMsg{}
-	}
+
+	return m, tea.Batch(
+		m.setSuccess("Copied to clipboard!"),
+		func() tea.Msg {
+			time.Sleep(blinkDuration)
+			return blinkMsg{}
+		},
+	)
 }

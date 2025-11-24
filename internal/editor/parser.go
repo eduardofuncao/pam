@@ -7,6 +7,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const (
+	colorKeyword = "86"
+	colorString  = "220"
+)
+
 var sqlKeywords = []string{
 	"LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL JOIN", "CROSS JOIN",
 	"FULL OUTER JOIN", "LEFT OUTER JOIN", "RIGHT OUTER JOIN",
@@ -53,11 +58,11 @@ func FormatSQLWithLineBreaks(sql string) string {
 
 func HighlightSQL(sql string) string {
 	keywordStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("86")).
+		Foreground(lipgloss.Color(colorKeyword)).
 		Bold(true)
 
 	stringStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("220"))
+		Foreground(lipgloss.Color(colorString))
 
 	highlighted := sql
 

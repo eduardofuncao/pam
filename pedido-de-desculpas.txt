@@ -1,0 +1,95 @@
+Fala Goivo, eu provavelmente destrui sua codebase entao ta aqui uma listinha de coisas pra te ajudar a se encontrar
+
+===========================================
+O QUE EU MUDEI (meus commits desde 3bc57bb)
+===========================================
+
+Seus commits pararam em 3bc57bb. Dai eu peguei o projeto e fiz umas mudancas.
+Segue o que eu mexi:
+
+Destrui a estrutura de comandos que tava em cmd/pam/ e reorganizei:
+
+Deletei:
+  - cmd/pam/app.go
+  - cmd/pam/commands.go
+
+Criei:
+  - internal/commands/handler/parser.go - parser dedicado
+  - Separei cada comando em arquivo proprio dentro de internal/commands/
+  - pkg/gohelp-luar/ - minha lib pro help.go
+
+Basicamente peguei aquele commands.go gigante e dividi em arquivos menores.
+Main.go agora so chama o handler ao inves de ter toda logica.
+
+-------------------------------------------
+COMANDO EXPLORE (6d6bdca)
+-------------------------------------------
+
+Adicionei comando explore pra explorar schema do banco:
+  - Lista tabelas
+  - Mostra estrutura
+  - Metadata do banco
+
+Arquivo: internal/commands/explore.go
+
+-------------------------------------------
+SQL STATELESS (cc32237)
+-------------------------------------------
+
+Agora da pra rodar SQL direto sem precisar salvar a query antes.
+Nao precisa passar pelo sistema de queries salvas.
+
+-------------------------------------------
+TUI
+-------------------------------------------
+
+Adicionei uns shortcuts e features na tabela interativa:
+
+- Atalho 'e' pra editar query direto da table view (abre $EDITOR)
+- Prompt de comando com ';' (secreto mas util)
+- Fixes de truncacao e rendering da tabela
+- adicionei constantes de layout pra ficar mais facil de atualizar
+
+Arquivos principais:
+  - internal/table/tui_prompt.go (novo, 146 linhas)
+  - internal/table/model.go, view.go, styles.go (modificados)
+
+-------------------------------------------
+REFATORACOES GERAIS
+-------------------------------------------
+
+Dei uma geral no codigo pra melhorar legibilidade:
+  - internal/config/config.go - limpeza
+  - internal/editor/* - melhorias
+  - internal/table/* - constantes e funcoes novas
+  - internal/db/db_util.go - utilities (95 linhas novas)
+
+-------------------------------------------
+NUMEROS
+-------------------------------------------
+
+38 arquivos mudados
++2.112 linhas
+-473 linhas
+
+7 commits no total
+
+-------------------------------------------
+RESUMO
+-------------------------------------------
+
+A maior mudanca foi reorganizar a estrutura de comandos (EVA Launch).
+Tirei tudo de commands.go e separei em arquivos individuais.
+
+Adicionei comando explore, SQL stateless, e adicionei mais shortcuts na TUI.
+Alguns fixes de rendering e refatoracoes de codigo.
+
+O core que voce fez continua funcionando igual, so ta mais organizado
+e com umas features extras na TUI.
+
+Se quiser entender melhor, os commits tao la com mensagens explicando.
+
+------
+
+Outra coisa, agora tem 2 footers. Da uma olhada na api do footer de cima em view.go
+basicamente voce pode imprimit direto na tui naquela area dedicada

@@ -10,6 +10,21 @@ import (
 	"github.com/eduardofuncao/pam/internal/db"
 )
 
+const (
+	placeholderText    = "Enter your query..."
+	charLimit          = 10000
+	initialWidth       = 80
+	minLineHeight      = 3
+	maxLineHeight      = 15
+	widthMargin        = 4
+	maxWidth           = 120
+	colorTitle         = "205"
+	colorSeparator     = "238"
+	separatorLine      = "──────────────────────────────────────────────────────────"
+	queryBullet        = "\n◆ "
+	helpText           = "Ctrl+D: Execute Query | Esc/Ctrl+C: Cancel"
+)
+
 type EditorModel struct {
 	textArea  textarea.Model
 	width     int
@@ -20,16 +35,16 @@ type EditorModel struct {
 
 func NewEditor(initialQuery db.Query) EditorModel {
 	ta := textarea.New()
-	ta.Placeholder = "Enter your query..."
+	ta.Placeholder = placeholderText
 	ta.Focus()
-	ta.CharLimit = 10000
-	ta.SetWidth(80)
+	ta.CharLimit = charLimit
+	ta.SetWidth(initialWidth)
 
 	formattedSQL := FormatSQLWithLineBreaks(initialQuery.SQL)
 	ta.SetValue(formattedSQL)
 
 	lineCount := countLines(formattedSQL)
-	height := min(max(lineCount, 3), 15) // Min 3 lines, max 15 lines
+	height := min(max(lineCount, minLineHeight), maxLineHeight)
 	ta.SetHeight(height)
 
 	return EditorModel{
@@ -60,13 +75,13 @@ func (m EditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.textArea.SetWidth(min(m.width-4, 120))
+		m.textArea.SetWidth(min(m.width-widthMargin, maxWidth))
 	}
 
 	m.textArea, cmd = m.textArea.Update(msg)
 
 	lineCount := countLines(m.textArea.Value())
-	newHeight := min(max(lineCount, 3), 15)
+	newHeight := min(max(lineCount, minLineHeight), maxLineHeight)
 	if newHeight != m.textArea.Height() {
 		m.textArea.SetHeight(newHeight)
 	}
@@ -77,30 +92,30 @@ func (m EditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m EditorModel) View() string {
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("205"))
+		Foreground(lipgloss.Color(colorTitle))
 
 	helpStyle := lipgloss.NewStyle().
 		Faint(true)
 
 	separatorStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("238"))
+		Foreground(lipgloss.Color(colorSeparator))
 
 	var content string
 	if m.submitted {
 		highlightedSQL := HighlightSQL(m.textArea.Value())
 		content = fmt.Sprintf(
 			"%s\n%s\n%s",
-			titleStyle.Render("\n◆ "+m.query.Name),
+			titleStyle.Render(queryBullet+m.query.Name),
 			highlightedSQL,
-			separatorStyle.Render("──────────────────────────────────────────────────────────"),
+			separatorStyle.Render(separatorLine),
 		)
 	} else {
 		content = fmt.Sprintf(
 			"%s\n%s\n%s\n%s",
-			titleStyle.Render("\n◆ "+m.query.Name),
+			titleStyle.Render(queryBullet+m.query.Name),
 			m.textArea.View(),
-			helpStyle.Render("Ctrl+D: Execute Query | Esc/Ctrl+C: Cancel"),
-			separatorStyle.Render("──────────────────────────────────────────────────────────"),
+			helpStyle.Render(helpText),
+			separatorStyle.Render(separatorLine),
 		)
 	}
 

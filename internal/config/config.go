@@ -8,8 +8,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var CfgPath = os.ExpandEnv("$HOME/.config/pam/")
-var CfgFile = filepath.Join(CfgPath, "config.yaml")
+const (
+	configDirPath     = "$HOME/.config/pam/"
+	configFileName    = "config.yaml"
+	dirPermissions    = 0755
+	filePermissions   = 0644
+	msgCreatingConfig = "Creating blank config file at"
+)
+
+var CfgPath = os.ExpandEnv(configDirPath)
+var CfgFile = filepath.Join(CfgPath, configFileName)
 
 type Config struct {
 	CurrentConnection string                    `yaml:"current_connection"`
@@ -30,7 +38,7 @@ func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("Creating blank config file at", CfgFile)
+			fmt.Println(msgCreatingConfig, CfgFile)
 			cfg := &Config{
 				CurrentConnection: "",
 				Connections:       make(map[string]ConnectionYAML),
@@ -54,7 +62,7 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 func (c *Config) Save() error {
-	err := os.MkdirAll(CfgPath, 0755)
+	err := os.MkdirAll(CfgPath, dirPermissions)
 	if err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
@@ -63,5 +71,5 @@ func (c *Config) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(CfgFile, data, 0644)
+	return os.WriteFile(CfgFile, data, filePermissions)
 }
