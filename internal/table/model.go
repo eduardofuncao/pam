@@ -4,6 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eduardofuncao/pam/internal/db"
 )
 
 const cellWidth = 15
@@ -24,11 +25,14 @@ type Model struct {
 	visualMode      bool
 	visualStartRow  int
 	visualStartCol  int
+	dbConnection    db.DatabaseConnection
+	tableName       string
+	primaryKeyCol   string
 }
 
 type blinkMsg struct{}
 
-func New(columns []string, data [][]string, elapsed time.Duration) Model {
+func New(columns []string, data [][]string, elapsed time.Duration, conn db.DatabaseConnection, tableName, primaryKeyCol string) Model {
 	return Model{
 		selectedRow: 0,
 		selectedCol: 0,
@@ -38,6 +42,9 @@ func New(columns []string, data [][]string, elapsed time.Duration) Model {
 		data:        data,
 		elapsed:     elapsed,
 		visualMode:  false,
+		dbConnection:  conn,
+		tableName:     tableName,
+		primaryKeyCol: primaryKeyCol,
 	}
 }
 

@@ -50,6 +50,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "y", "enter":
 		return m.copySelection()
+
+	case "u":
+		return m.updateCell()
 	}
 
 	return m, nil
@@ -58,12 +61,12 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
 	m.height = msg.Height
-	
+
 	m.visibleCols = (m.width - 2) / (cellWidth + 1)
 	if m.visibleCols > m.numCols() {
 		m.visibleCols = m.numCols()
 	}
-	
+
 	// Offset so table doesn't take full terminal height
 	m.visibleRows = m.height - 9
 	if m.visibleRows > m.numRows() {
@@ -72,6 +75,6 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	if m.visibleRows < 1 {
 		m.visibleRows = 1
 	}
-	
+
 	return m
 }

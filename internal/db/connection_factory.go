@@ -1,21 +1,20 @@
 package db
 
-import(
-	"errors"
+import (
 	"fmt"
 )
 
 func CreateConnection(name, dbType, connString string) (DatabaseConnection, error) {
-	switch dbType{
-	case "postgres":
+	switch dbType {
+	case "postgres", "postgresql":
 		return NewPostgresConnection(name, connString)
-	case "myslq", "mariadb":
-		return nil, errors.New("mysql driver not implemented, check connection factory")
+	case "mysql", "mariadb":
+		return NewMySQLConnection(name, connString)
 	case "sqlite", "sqlite3":
-		return nil, errors.New("sqlite driver not implemented, check connection factory")
+		return NewSQLiteConnection(name, connString)
 	case "godror", "oracle":
 		return NewOracleConnection(name, connString)
 	default:
-		return nil, errors.New(fmt.Sprintln("Driver not implemented for ", dbType, ". Check connection factory"))
+		return nil, fmt.Errorf("driver not implemented for %s", dbType)
 	}
 }

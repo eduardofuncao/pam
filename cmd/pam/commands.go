@@ -212,11 +212,24 @@ func (a *App) handleQuery() {
 	if err != nil {
 		log.Fatal("Could not complete query: ", err)
 	}
-
 	columns, data, err := db.FormatTableData(rows. (*sql.Rows))
-	done <- struct{}{}
 
-	if err := table.Render(columns, data, time.Since(start)); err != nil {
+	done <- struct{}{}
+	elapsed := time.Since(start)
+
+	metadata, err := db.InferTableMetadata(currConn, query)
+	tableName := ""
+	primaryKeyCol := ""
+	
+	if err == nil && metadata != nil {
+		tableName = metadata.TableName
+		primaryKeyCol = metadata.PrimaryKey
+	} else {
+		fmt. Fprintf(os.Stderr, "Warning: Could not extract table metadata: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Update functionality will be limited.\n")
+	}
+
+	if err := table.Render(columns, data, elapsed, currConn, tableName, primaryKeyCol); err != nil {
 		log.Fatalf("Error rendering table: %v", err)
 	}
 }

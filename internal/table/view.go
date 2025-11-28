@@ -57,9 +57,15 @@ func (m Model) renderDataRow(rowIndex int) string {
 }
 
 func (m Model) renderFooter() string {
-	footer := fmt.Sprintf("\nIn %.2fs | Position: Row %d/%d, Col %d/%d | Scroll: H/L (left/right), K/J (up/down) | Copy: y/enter",
-		m.elapsed.Seconds(), m.selectedRow+1, m.numRows(), m.selectedCol+1, m.numCols())
-	// footer += fmt.Sprintf("\nSelected cell: %s", m.data[m.selectedRow][m.selectedCol])
+	updateInfo := ""
+	if m.tableName != "" && m.primaryKeyCol != "" {
+		updateInfo = " | Update: u"
+	} else if m.tableName != "" {
+		updateInfo = " | Update: u (no PK)"
+	}
+
+footer := fmt.Sprintf("\nIn %.2fs | Position: Row %d/%d, Col %d/%d | Scroll: H/L (left/right), K/J (up/down) | Copy: y/enter%s",
+		m.elapsed.Seconds(), m.selectedRow+1, m.numRows(), m.selectedCol+1, m.numCols(), updateInfo)
 	return lipgloss.NewStyle().Faint(true).Render(footer)
 }
 

@@ -1,6 +1,10 @@
 package db
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 type BaseConnection struct {
 	Name       string
@@ -21,6 +25,35 @@ func (b *BaseConnection) Close() error {
 }
 func (b *BaseConnection) Query(name string, args ...any) (any, error) {
 	return struct{}{}, errors.New("Close() not implemented for base connection")
+}
+func (b *BaseConnection) Exec(sql string, args ...any) error {
+	return errors. New("Exec() not implemented for base connection")
+}
+func (b *BaseConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
+	return nil, errors. New("GetTableMetadata() not implemented for base connection")
+}
+
+func (b *BaseConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
+	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
+	
+	if pkColumn != "" && pkValue != "" {
+		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
+		return fmt.Sprintf(
+			"UPDATE %s\nSET %s = '%s'\nWHERE %s = '%s';",
+			tableName,
+			columnName,
+			escapedValue,
+			pkColumn,
+			escapedPkValue,
+		)
+	}
+	
+	return fmt.Sprintf(
+		"-- No primary key specified. Edit WHERE clause manually.\nUPDATE %s\nSET %s = '%s'\nWHERE <condition>;",
+		tableName,
+		columnName,
+		escapedValue,
+	)
 }
 
 func (b *BaseConnection) GetName() string                     { return b.Name }

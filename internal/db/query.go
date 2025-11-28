@@ -5,9 +5,12 @@ import (
 )
 
 type Query struct {
-	Name string
-	Id   int
-	SQL  string
+	Name       string            `yaml:"name"`
+	Id         int               `yaml:"id"`
+	SQL        string            `yaml:"sql"`
+	TableName  string            `yaml:"table_name,omitempty"`
+	PrimaryKey string            `yaml:"primary_key,omitempty"`
+	Metadata   map[string]string `yaml:"metadata,omitempty"`
 }
 
 func FindQueryWithSelector(queries map[string]Query, selector string) (Query, bool) {
