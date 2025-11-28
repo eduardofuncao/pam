@@ -76,7 +76,7 @@ func (a *App) handleAdd() {
 
 	_, ok := a.config.Connections[a.config.CurrentConnection]
 	if !ok {
-		a.config.Connections[a.config.CurrentConnection] = config.ConnectionYAML{}
+		a.config.Connections[a.config.CurrentConnection] = &config.ConnectionYAML{}
 	}
 	queries := a.config.Connections[a.config.CurrentConnection].Queries
 
@@ -99,8 +99,8 @@ func (a *App) handleAdd() {
 		defer os.Remove(tmpPath)
 
 		header := fmt.Sprintf("-- Creating new query: %s\n", queryName)
-		header += fmt.Sprintf("-- Connection: %s (%s)\n", 
-			a.config.CurrentConnection, 
+		header += fmt.Sprintf("-- Connection: %s (%s)\n",
+			a.config.CurrentConnection,
 			a.config.Connections[a.config.CurrentConnection].DBType)
 		header += "-- Write your SQL query below and save\n\n"
 
@@ -165,34 +165,42 @@ func (a *App) handleRemove() {
 }
 
 func (a *App) handleQuery() {
-	if len(os.Args) < 3 {
-		log.Fatal("Usage:pam query/run <query-name>")
-	}
-
 	editMode := false
-	if len(os.Args) > 3 {
-		if os.Args[3] == "--edit" || os.Args[3] == "-e" {
+	selector := ""
+
+	for _, arg := range os.Args[2:] {
+		if arg == "--edit" || arg == "-e" {
 			editMode = true
+		} else {
+			selector = arg
 		}
 	}
 
 	currConn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
 
-	queries := currConn.GetQueries()
-	selector := os.Args[2]
-	query, found := db.FindQueryWithSelector(queries, selector)
-	if !found {
-		log.Fatalf("Could not find query with name/id: %v", selector)
+	var query db.Query
+	if selector != "" {
+		queries := currConn.GetQueries()
+		q, found := db.FindQueryWithSelector(queries, selector)
+		if !found {
+			log. Fatalf("Could not find query with name/id: %v", selector)
+		}
+		query = q
+	} else {
+		query = a.config.Connections[a. config.CurrentConnection].LastQuery
+		if query.Name == "" {
+			log.Fatal("No last query found.  Usage: pam query/run <query-name>")
+		}
 	}
 
 	editedQuery, submitted, err := editor.EditQuery(query, editMode)
 	if submitted {
-		a.config.Connections[a.config.CurrentConnection].Queries[query.Name] = editedQuery
-		a.config.Save()
+		a. config.Connections[a.config.CurrentConnection].Queries[query.Name] = editedQuery
 	}
+	a.config. Connections[a.config.CurrentConnection].LastQuery = editedQuery
+	a.config.Save()
 
-	err = currConn.Open()
-	if err != nil {
+	if err = currConn.Open(); err != nil {
 		log.Fatalf("Could not open the connection to %s/%s: %s", currConn.GetDbType(), currConn.GetName(), err)
 	}
 
@@ -204,16 +212,11 @@ func (a *App) handleQuery() {
 	if err != nil {
 		log.Fatal("Could not complete query: ", err)
 	}
-	sqlRows, ok := rows.(*sql.Rows)
-	if !ok {
-		log.Fatal("Query did not return *sql.Rows")
-	}
-	columns, data, err := db.FormatTableData(sqlRows)
 
+	columns, data, err := db.FormatTableData(rows. (*sql.Rows))
 	done <- struct{}{}
-	elapsed := time.Since(start)
 
-	if err := table.Render(columns, data, elapsed); err != nil {
+	if err := table.Render(columns, data, time.Since(start)); err != nil {
 		log.Fatalf("Error rendering table: %v", err)
 	}
 }

@@ -10,7 +10,9 @@ type DatabaseConnection interface {
 	GetDbType() string
 	GetConnString() string
 	GetQueries() map[string]Query
+	GetLastQuery() Query
 
+	SetLastQuery(Query)
 	SetQueries(map[string]Query)
 }
 
