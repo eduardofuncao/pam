@@ -331,3 +331,12 @@ func printError(format string, args ...any) {
 	fmt.Fprintln(os.Stderr, styles.Error.Render("✗ Error:"), msg)
 	os.Exit(1)
 }
+
+func (a *App) handleHelp() {
+
+	if len(os.Args) == 2 {
+		a.PrintGeneralHelp()
+	} else {
+		a.PrintCommandHelp()
+	}
+}

@@ -44,6 +44,8 @@ func (a *App) Run() {
 		a.handleStatus()
 	case "history":
 		a.handleHistory()
+	case "help":
+		a.handleHelp()
 	default:
 		log.Fatalf("Unknown command: %s", command)
 	}
