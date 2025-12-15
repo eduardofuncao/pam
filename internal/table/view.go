@@ -72,18 +72,34 @@ func (m Model) renderDataRow(rowIndex int) string {
 	return strings.Join(cells, borderStyle.Render(borderSeparator))
 }
 
-func (m Model) renderFooter() string {
+type shortcut struct {
+	key   string
+	label string
+}
+
+func renderShortcuts(shortcuts []shortcut) string {
 	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorKeyHighlight)).Bold(true)
 	normalStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorNormal))
+
+	var parts []string
+	for _, s := range shortcuts {
+		parts = append(parts, keyStyle.Render(s.key)+normalStyle.Render(s.label))
+	}
+	return strings.Join(parts, "  ")
+}
+
+var (
+	shortcutsNormal = []shortcut{
+		{"e", "dit"}, {"d", "el"}, {"y", "ank"}, {";", "cmd"}, {"q", "uit"},
+	}
+	shortcutsDelete = []shortcut{
+		{"c", "ell"}, {"r", "ow"}, {"esc", " cancel"},
+	}
+)
+
+func (m Model) renderFooter() string {
 	successStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorSuccess)).Bold(true)
 	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorError)).Bold(true)
-
-	edit := keyStyle.Render("e") + normalStyle.Render("dit")
-	del := keyStyle.Render("d") + normalStyle.Render("el")
-	yank := keyStyle.Render("y") + normalStyle.Render("ank")
-	cmd := keyStyle.Render(";") + normalStyle.Render("cmd")
-	quit := keyStyle.Render("q") + normalStyle.Render("uit")
-	nav := normalStyle.Render("hjkl: navigate")
 
 	cell := m.getCurrentCell()
 	colType := "?"
@@ -93,9 +109,21 @@ func (m Model) renderFooter() string {
 		cellValue = cell.Value
 	}
 
-	// First line: confirm prompt OR command prompt OR column type + (status message OR cell content)
+	// First line: delete mode OR confirm prompt OR command prompt OR column type + (status message OR cell content)
 	var firstLine string
-	if m.confirmMode {
+	if m.deleteMode {
+		dangerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorError)).Bold(true)
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+
+		target := "cell"
+		if m.deleteTarget == "row" {
+			target = "row"
+		}
+
+		firstLine = fmt.Sprintf("\n%s %s",
+			dangerStyle.Render(fmt.Sprintf("DELETE %s?", target)),
+			hintStyle.Render("[Enter] confirm  [Esc] cancel"))
+	} else if m.confirmMode {
 		promptStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
 		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 		firstLine = fmt.Sprintf("\n%s %s",
@@ -114,17 +142,24 @@ func (m Model) renderFooter() string {
 		firstLine = fmt.Sprintf("\n%s  %s", colType, mutedStyle.Render(cellValue))
 	}
 
-	// Second line: coordinates + commands (always shown)
+	// Second line: coordinates + shortcuts (changes based on mode)
 	highlightStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorKeyHighlight))
 	whiteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+	normalStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorNormal))
 
 	positionStr := fmt.Sprintf("[%d,%d]", m.selectedRow+1, m.selectedCol+1)
 	sizeStr := fmt.Sprintf("of %d×%d", m.numRows(), m.numCols())
 
-	secondLine := fmt.Sprintf("%s %s | %s  %s  %s  %s  %s  %s",
+	shortcuts := shortcutsNormal
+	if m.deleteMode {
+		shortcuts = shortcutsDelete
+	}
+
+	secondLine := fmt.Sprintf("%s %s | %s  %s",
 		highlightStyle.Render(positionStr),
 		whiteStyle.Render(sizeStr),
-		edit, del, yank, cmd, quit, nav,
+		renderShortcuts(shortcuts),
+		normalStyle.Render("hjkl: navigate"),
 	)
 
 	return firstLine + "\n" + secondLine
@@ -147,17 +182,16 @@ func (m Model) getCellStyle(row, col int) lipgloss.Style {
 }
 
 func formatCell(content string, cellWidth int) string {
-	if cellWidth < 2 {
-		return strings.Repeat(" ", cellWidth)
+	if cellWidth < 1 {
+		return ""
 	}
 
-	effectiveWidth := cellWidth - 1
-	width := runewidth.StringWidth(content)
+	contentWidth := runewidth.StringWidth(content)
 
-	if width > effectiveWidth {
-		return runewidth.Truncate(content, effectiveWidth, truncationEllipsis) + " "
+	if contentWidth > cellWidth {
+		return runewidth.Truncate(content, cellWidth-1, truncationEllipsis) + " "
 	}
 
-	padding := effectiveWidth - width
-	return content + strings.Repeat(" ", padding) + " "
+	padding := cellWidth - contentWidth
+	return content + strings.Repeat(" ", padding)
 }

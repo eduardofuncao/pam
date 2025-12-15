@@ -44,6 +44,8 @@ type Model struct {
 	executeCommand  CommandExecutor
 	confirmMode     bool
 	confirmAction   string
+	deleteMode      bool
+	deleteTarget    string // "cell" or "row"
 }
 
 type blinkMsg struct{}
@@ -168,10 +170,16 @@ func calculateColumnWidths(tableData *db.TableData) []int {
 		if len(tableData.Rows) > 0 && colIdx < len(tableData.Rows[0]) {
 			colType = tableData.Rows[0][colIdx].ColumnType
 		}
+		typeLimit := getTypeMaxWidth(colType)
 
-		typeMax := getTypeMaxWidth(colType)
+		// charLimit is the ceiling - header wins if larger than type limit
+		charLimit := typeLimit
+		if headerWidth > typeLimit {
+			charLimit = headerWidth
+		}
 
-		maxContentWidth := headerWidth
+		// Find largest content width
+		maxContentWidth := 0
 		for _, row := range tableData.Rows {
 			if colIdx < len(row) {
 				contentWidth := runewidth.StringWidth(row[colIdx].Value)
@@ -181,15 +189,16 @@ func calculateColumnWidths(tableData *db.TableData) []int {
 			}
 		}
 
-		if maxContentWidth > typeMax {
-			widths[colIdx] = typeMax
-		} else {
-			widths[colIdx] = maxContentWidth
+		// Width: use content width, cap at charLimit, minimum is headerWidth
+		width := maxContentWidth
+		if width > charLimit {
+			width = charLimit
+		}
+		if width < headerWidth {
+			width = headerWidth
 		}
 
-		if widths[colIdx] < headerWidth {
-			widths[colIdx] = headerWidth
-		}
+		widths[colIdx] = width
 	}
 
 	return widths

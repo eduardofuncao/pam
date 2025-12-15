@@ -1,6 +1,7 @@
 package table
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -46,6 +47,26 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyEnter:
 			return m.executeConfirmAction()
+		default:
+			return m, nil
+		}
+	}
+
+	// Handle delete mode keys
+	if m.deleteMode {
+		switch msg.String() {
+		case "esc", "ctrl+c":
+			m.deleteMode = false
+			m.deleteTarget = ""
+			return m, nil
+		case "r":
+			m.deleteTarget = "row"
+			return m, nil
+		case "c":
+			m.deleteTarget = "cell"
+			return m, nil
+		case "enter":
+			return m.executeDelete()
 		default:
 			return m, nil
 		}
@@ -114,7 +135,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.editCell()
 
 	case "d":
-		return m.enterDeleteConfirm()
+		return m.enterDeleteMode()
 	}
 
 	return m, nil
@@ -190,6 +211,9 @@ func (m Model) editCell() (tea.Model, tea.Cmd) {
 	if cell.RawValue == nil {
 		valueToEdit = ""
 	}
+
+	// Pretty-print JSON if valid
+	valueToEdit = prettyPrintJSON(valueToEdit)
 
 	if _, err := tmpfile.WriteString(valueToEdit); err != nil {
 		log.Printf("Error writing to temp file: %v", err)
@@ -308,6 +332,67 @@ func (m Model) placeholder(dbType string, index int) string {
 	}
 }
 
+func (m Model) enterDeleteMode() (tea.Model, tea.Cmd) {
+	if m.tableData == nil || m.tableData.TableName == "" {
+		return m, m.setError("Cannot delete: table name unknown")
+	}
+	if m.tableData.Connection == nil {
+		return m, m.setError("Cannot delete: no database connection")
+	}
+	cell := m.getCurrentCell()
+	if cell == nil {
+		return m, nil
+	}
+	m.deleteMode = true
+	m.deleteTarget = "cell" // default to cell
+	return m, nil
+}
+
+func (m Model) executeDelete() (tea.Model, tea.Cmd) {
+	m.deleteMode = false
+	target := m.deleteTarget
+	m.deleteTarget = ""
+
+	switch target {
+	case "row":
+		return m.deleteRow()
+	default:
+		// Default to cell deletion (clear to NULL)
+		return m.clearCell()
+	}
+}
+
+func (m Model) deleteRow() (tea.Model, tea.Cmd) {
+	if m.tableData == nil || m.tableData.Connection == nil {
+		return m, m.setError("Cannot delete row: no connection")
+	}
+	if m.selectedRow < 0 || m.selectedRow >= len(m.tableData.Rows) {
+		return m, m.setError("Cannot delete row: invalid row")
+	}
+
+	whereClause, args := m.buildRowFilter(m.selectedRow, -1, 1)
+	if whereClause == "" {
+		return m, m.setError("Cannot delete row: no filter conditions")
+	}
+
+	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE %s", m.tableData.TableName, whereClause)
+
+	_, err := m.tableData.Connection.GetDB().Exec(deleteSQL, args...)
+	if err != nil {
+		return m, m.setError(fmt.Sprintf("Delete failed: %v", err))
+	}
+
+	// Remove row from local data
+	m.tableData.Rows = append(m.tableData.Rows[:m.selectedRow], m.tableData.Rows[m.selectedRow+1:]...)
+
+	// Adjust cursor if needed
+	if m.selectedRow >= len(m.tableData.Rows) && m.selectedRow > 0 {
+		m.selectedRow--
+	}
+
+	return m, m.setSuccess("Row deleted")
+}
+
 func (m Model) enterDeleteConfirm() (tea.Model, tea.Cmd) {
 	if m.tableData == nil || m.tableData.TableName == "" {
 		return m, m.setError("Cannot delete: table name unknown")
@@ -351,4 +436,16 @@ func (m Model) clearCell() (tea.Model, tea.Cmd) {
 	m.tableData.Rows[cell.RowIndex][cell.ColumnIndex].RawValue = nil
 
 	return m, m.setSuccess("Cell cleared")
+}
+
+func prettyPrintJSON(s string) string {
+	var data any
+	if err := json.Unmarshal([]byte(s), &data); err != nil {
+		return s
+	}
+	pretty, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return s
+	}
+	return string(pretty)
 }

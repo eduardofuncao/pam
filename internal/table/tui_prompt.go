@@ -15,6 +15,15 @@ func (m Model) runCommand(input string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle "delete row" command
+	if strings.ToLower(input) == "delete row" {
+		m.commandMode = false
+		m.commandInput.Reset()
+		m.deleteMode = true
+		m.deleteTarget = "row"
+		return m, nil
+	}
+
 	if m.executeCommand == nil {
 		m.commandMode = false
 		m.commandInput.Reset()
@@ -29,6 +38,14 @@ func (m Model) runCommand(input string) (tea.Model, tea.Cmd) {
 	// Expand SQL if current table is available
 	if m.tableData != nil && m.tableData.TableName != "" {
 		input = m.expandSQL(input, m.tableData.TableName)
+	}
+
+	// Safety check: block DELETE without WHERE clause
+	upperInput := strings.ToUpper(input)
+	if strings.Contains(upperInput, "DELETE") && strings.Contains(upperInput, " FROM ") && !strings.Contains(upperInput, " WHERE ") {
+		m.commandMode = false
+		m.commandInput.Reset()
+		return m, m.setError("DELETE without WHERE clause is not allowed")
 	}
 
 	// Parse command into args
@@ -117,8 +134,12 @@ func (m Model) expandSQL(input, tableName string) string {
 		}
 	}
 
-	// Expand DELETE without FROM
+	// Expand DELETE without FROM (but require WHERE clause for safety)
 	if strings.HasPrefix(upperSQL, "DELETE") && !strings.Contains(upperSQL, " FROM ") {
+		// Safety: refuse DELETE without WHERE clause
+		if !strings.Contains(upperSQL, " WHERE ") {
+			return input // Return unchanged, will fail gracefully
+		}
 		// Inject FROM after DELETE
 		sql = "DELETE FROM " + tableName + sql[len("DELETE"):]
 	}

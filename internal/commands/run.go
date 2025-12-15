@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -26,7 +27,8 @@ func RunWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec table.
 		if fromTUI {
 			return nil, fmt.Errorf("usage: run <query-name|sql>")
 		}
-		log.Fatal("Usage: pam run <query-name> [--edit|-e]\n       pam run --edit|-e\n       pam run '<raw-sql>'")
+		executeExternalEditor(currConn, cfg, cmdExec)
+		return nil, nil
 	}
 
 	editFlag := hasEditFlagArgs(args)
@@ -153,6 +155,42 @@ func looksLikeSQL(s string) bool {
 		}
 	}
 	return false
+}
+
+func executeExternalEditor(currConn db.DatabaseConnection, cfg *config.Config, cmdExec table.CommandExecutor) {
+	editorCmd := os.Getenv("EDITOR")
+	if editorCmd == "" {
+		log.Fatal("$EDITOR not set")
+	}
+
+	tmpFile, err := os.CreateTemp("", "pam-query-*.sql")
+	if err != nil {
+		log.Fatalf("Failed to create temp file: %v", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+	tmpFile.Close()
+
+	cmd := exec.Command(editorCmd, tmpPath)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("Failed to run editor: %v", err)
+	}
+
+	content, err := os.ReadFile(tmpPath)
+	if err != nil {
+		log.Fatalf("Failed to read temp file: %v", err)
+	}
+
+	query := strings.TrimSpace(string(content))
+	if query == "" {
+		fmt.Println("Empty query, nothing to execute")
+		return
+	}
+
+	executeRawSQLWithArgs(currConn, query, false, cfg, cmdExec)
 }
 
 func executeOneShot(currConn db.DatabaseConnection, cfg *config.Config, cmdExec table.CommandExecutor) {
