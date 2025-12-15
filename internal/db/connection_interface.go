@@ -8,6 +8,8 @@ type DatabaseConnection interface {
 	Close() error
 	Query(queryName string, args ...any) (any, error)
 	QueryDirect(sql string, args ...any) (any, error)
+	QueryTableWithLimit(tableName string, limit int) (*sql.Rows, error)
+	ListTables() ([]string, error)
 
 	GetName() string
 	GetDbType() string

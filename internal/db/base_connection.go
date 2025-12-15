@@ -1,6 +1,9 @@
 package db
 
-import "errors"
+import (
+	"database/sql"
+	"errors"
+)
 
 type BaseConnection struct {
 	Name       string
@@ -23,6 +26,12 @@ func (b *BaseConnection) Query(name string, args ...any) (any, error) {
 }
 func (b *BaseConnection) QueryDirect(sql string, args ...any) (any, error) {
 	return struct{}{}, errors.New("QueryDirect() not implemented for base connection")
+}
+func (b *BaseConnection) QueryTableWithLimit(tableName string, limit int) (*sql.Rows, error) {
+	return nil, errors.New("QueryTableWithLimit() not implemented for base connection")
+}
+func (b *BaseConnection) ListTables() ([]string, error) {
+	return nil, errors.New("ListTables() not implemented for base connection")
 }
 
 func (b *BaseConnection) GetName() string                     { return b.Name }

@@ -1,14 +1,12 @@
 package commands
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/eduardofuncao/pam/internal/config"
-	"github.com/eduardofuncao/pam/internal/db"
 	"github.com/eduardofuncao/pam/internal/editor"
 )
 
@@ -54,40 +52,10 @@ func ListTables(cfg *config.Config) {
 	}
 	defer currConn.Close()
 
-	dbType := currConn.GetDbType()
-	var querySQL string
-
-	switch dbType {
-	case "sqlite3":
-		querySQL = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-	case "postgres":
-		querySQL = "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"
-	case "mysql":
-		querySQL = "SHOW TABLES"
-	case "oracle":
-		querySQL = "SELECT table_name FROM user_tables ORDER BY table_name"
-	default:
-		log.Fatalf("Unsupported database type for listing tables: %s", dbType)
-	}
-
-	queries := currConn.GetQueries()
-	if queries == nil {
-		queries = make(map[string]db.Query)
-	}
-	tempQueryName := "__list_tables_temp__"
-	queries[tempQueryName] = db.Query{Name: tempQueryName, SQL: querySQL}
-	currConn.SetQueries(queries)
-
-	rows, err := currConn.Query(tempQueryName)
+	tables, err := currConn.ListTables()
 	if err != nil {
 		log.Fatalf("Could not list tables: %v", err)
 	}
-
-	sqlRows, ok := rows.(*sql.Rows)
-	if !ok {
-		log.Fatal("Query did not return *sql.Rows")
-	}
-	defer sqlRows.Close()
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
@@ -95,15 +63,7 @@ func ListTables(cfg *config.Config) {
 
 	fmt.Println(titleStyle.Render("\nTables:"))
 
-	for sqlRows.Next() {
-		var tableName string
-		if err := sqlRows.Scan(&tableName); err != nil {
-			log.Fatalf("Error scanning table name: %v", err)
-		}
+	for _, tableName := range tables {
 		fmt.Printf("◆ %s\n", tableName)
-	}
-
-	if err := sqlRows.Err(); err != nil {
-		log.Fatalf("Error iterating rows: %v", err)
 	}
 }

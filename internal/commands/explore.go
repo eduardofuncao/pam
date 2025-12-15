@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -62,8 +61,6 @@ func ExploreWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec ta
 		log.Fatalf("Could not open the connection to %s/%s: %s", currConn.GetDbType(), currConn.GetName(), err)
 	}
 
-	querySQL := fmt.Sprintf("SELECT * FROM %s LIMIT %d", tableName, limit)
-
 	start := time.Now()
 	var done chan struct{}
 	if !fromTUI {
@@ -71,7 +68,7 @@ func ExploreWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec ta
 		go spinner.Wait(done)
 	}
 
-	rows, err := currConn.QueryDirect(querySQL)
+	sqlRows, err := currConn.QueryTableWithLimit(tableName, limit)
 	if err != nil {
 		if !fromTUI {
 			done <- struct{}{}
@@ -82,17 +79,7 @@ func ExploreWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec ta
 		log.Fatalf("Could not query table '%s': %v", tableName, err)
 	}
 
-	sqlRows, ok := rows.(*sql.Rows)
-	if !ok {
-		if !fromTUI {
-			done <- struct{}{}
-		}
-		if fromTUI {
-			return nil, fmt.Errorf("query did not return *sql.Rows")
-		}
-		log.Fatal("Query did not return *sql.Rows")
-	}
-
+	querySQL := fmt.Sprintf("SELECT * FROM %s (LIMIT %d)", tableName, limit)
 	tableData, err := db.BuildTableData(sqlRows, querySQL, currConn)
 	if err != nil {
 		if !fromTUI {

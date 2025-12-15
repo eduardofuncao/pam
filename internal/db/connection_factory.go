@@ -9,6 +9,8 @@ func CreateConnection(name, dbType, connString string) (DatabaseConnection, erro
 	switch dbType{
 	case "postgres":
 		return NewPostgresConnection(name, connString)
+	case "sqlserver", "mssql":
+		return NewSqlServerConnection(name, connString)
 	case "myslq", "mariadb":
 		return nil, errors.New("mysql driver not implemented, check connection factory")
 	case "sqlite", "sqlite3":
