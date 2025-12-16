@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 type Connection struct {
@@ -13,7 +15,7 @@ type Connection struct {
 	Username   string
 	Password   string
 	DB         *sql.DB
-	Queries    map[string]Query
+	Queries    map[string]types.Query
 }
 
 func NewConnection(name, dbType, connStr, user, pass string) *Connection {

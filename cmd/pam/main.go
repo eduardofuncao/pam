@@ -51,7 +51,7 @@ func ParseWithArgs(cfg *config.Config, args []string, fromTUI bool) (*db.TableDa
 			return nil, fmt.Errorf("init command not available in TUI")
 		}
 		commands.Init(cfg)
-	case "switch", "use":
+	case "switch", "use", "connect":
 		if fromTUI {
 			return nil, fmt.Errorf("switch command not available in TUI")
 		}

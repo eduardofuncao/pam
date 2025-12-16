@@ -20,39 +20,49 @@ const (
 type CommandExecutor func(args []string) (*db.TableData, error)
 
 type Model struct {
-	width           int
-	height          int
-	selectedRow     int
-	selectedCol     int
-	offsetX         int
-	offsetY         int
-	visibleCols     int
-	visibleRows     int
-	columnWidths    []int
-	tableData       *db.TableData
-	elapsed         time.Duration
-	blinkCopiedCell bool
-	visualMode      bool
-	visualStartRow  int
-	visualStartCol  int
-	statusMessage   string
-	isError         bool
-	commandMode     bool
-	commandInput    textinput.Model
-	queries         map[string]string
-	originalSQL     string
-	executeCommand  CommandExecutor
-	confirmMode     bool
-	confirmAction   string
-	deleteMode      bool
-	deleteTarget    string // "cell" or "row"
+	width            int
+	height           int
+	selectedRow      int
+	selectedCol      int
+	offsetX          int
+	offsetY          int
+	visibleCols      int
+	visibleRows      int
+	columnWidths     []int
+	tableData        *db.TableData
+	elapsed          time.Duration
+	blinkCopiedCell  bool
+	visualMode       bool
+	visualStartRow   int
+	visualStartCol   int
+	statusMessage    string
+	isError          bool
+	commandMode      bool
+	commandInput     textinput.Model
+	queries          map[string]string
+	originalSQL      string
+	executeCommand   CommandExecutor
+	confirmMode      bool
+	confirmAction    string
+	deleteMode       bool
+	deleteTarget     string // "cell" or "row"
+	queryDescriptor  *db.QueryDescriptor
+	autoRefresh      bool
+	refreshInterval  time.Duration
+	lastRefresh      time.Time
 }
 
 type blinkMsg struct{}
 
 type clearStatusMsg struct{}
 
+type refreshTickMsg struct{}
+
 func New(tableData *db.TableData, elapsed time.Duration, cmdExec CommandExecutor) Model {
+	return NewWithDescriptor(tableData, elapsed, cmdExec, nil)
+}
+
+func NewWithDescriptor(tableData *db.TableData, elapsed time.Duration, cmdExec CommandExecutor, desc *db.QueryDescriptor) Model {
 	ti := textinput.New()
 	ti.Placeholder = ""
 	ti.CharLimit = 500
@@ -64,23 +74,32 @@ func New(tableData *db.TableData, elapsed time.Duration, cmdExec CommandExecutor
 	}
 
 	return Model{
-		selectedRow:     0,
-		selectedCol:     0,
-		offsetX:         0,
-		offsetY:         0,
-		tableData:       tableData,
-		elapsed:         elapsed,
-		visualMode:      false,
-		columnWidths:    calculateColumnWidths(tableData),
-		commandMode:     false,
-		commandInput:    ti,
-		queries:         make(map[string]string),
-		originalSQL:     originalSQL,
-		executeCommand:  cmdExec,
+		selectedRow:      0,
+		selectedCol:      0,
+		offsetX:          0,
+		offsetY:          0,
+		tableData:        tableData,
+		elapsed:          elapsed,
+		visualMode:       false,
+		columnWidths:     calculateColumnWidths(tableData),
+		commandMode:      false,
+		commandInput:     ti,
+		queries:          make(map[string]string),
+		originalSQL:      originalSQL,
+		executeCommand:   cmdExec,
+		queryDescriptor:  desc,
+		autoRefresh:      desc != nil,
+		refreshInterval:  10 * time.Second,
+		lastRefresh:      time.Now(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
+	if m.autoRefresh {
+		return tea.Tick(m.refreshInterval, func(t time.Time) tea.Msg {
+			return refreshTickMsg{}
+		})
+	}
 	return nil
 }
 

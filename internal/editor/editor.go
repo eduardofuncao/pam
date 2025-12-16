@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 const (
@@ -29,11 +29,11 @@ type EditorModel struct {
 	textArea  textarea.Model
 	width     int
 	height    int
-	query     db.Query
+	query     types.Query
 	submitted bool
 }
 
-func NewEditor(initialQuery db.Query) EditorModel {
+func NewEditor(initialQuery types.Query) EditorModel {
 	ta := textarea.New()
 	ta.Placeholder = placeholderText
 	ta.Focus()
@@ -122,11 +122,11 @@ func (m EditorModel) View() string {
 	return content + "\n"
 }
 
-func (m EditorModel) GetQuery() (db.Query, bool) {
+func (m EditorModel) GetQuery() (types.Query, bool) {
 	return m.query, m.submitted
 }
 
-func EditQuery(query db.Query, edit bool) (db.Query, bool, error) {
+func EditQuery(query types.Query, edit bool) (types.Query, bool, error) {
 	if !edit {
 		m := NewEditor(query)
 		m.submitted = true
@@ -139,7 +139,7 @@ func EditQuery(query db.Query, edit bool) (db.Query, bool, error) {
 
 	finalModel, err := p.Run()
 	if err != nil {
-		return db.Query{}, false, err
+		return types.Query{}, false, err
 	}
 
 	editor := finalModel.(EditorModel)

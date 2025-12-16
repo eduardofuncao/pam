@@ -54,13 +54,6 @@ func ExploreWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec ta
 
 	currConn := config.FromConnectionYaml(cfg.Connections[cfg.CurrentConnection])
 
-	if err := currConn.Open(); err != nil {
-		if fromTUI {
-			return nil, fmt.Errorf("could not open connection: %w", err)
-		}
-		log.Fatalf("Could not open the connection to %s/%s: %s", currConn.GetDbType(), currConn.GetName(), err)
-	}
-
 	start := time.Now()
 	var done chan struct{}
 	if !fromTUI {
@@ -68,7 +61,14 @@ func ExploreWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec ta
 		go spinner.Wait(done)
 	}
 
-	sqlRows, err := currConn.QueryTableWithLimit(tableName, limit)
+	desc := &db.QueryDescriptor{
+		Type:       "explore",
+		TableName:  tableName,
+		Limit:      limit,
+		Connection: currConn,
+	}
+
+	tableData, err := db.ExecuteQuery(desc)
 	if err != nil {
 		if !fromTUI {
 			done <- struct{}{}
@@ -79,22 +79,10 @@ func ExploreWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec ta
 		log.Fatalf("Could not query table '%s': %v", tableName, err)
 	}
 
-	querySQL := fmt.Sprintf("SELECT * FROM %s (LIMIT %d)", tableName, limit)
-	tableData, err := db.BuildTableData(sqlRows, querySQL, currConn)
-	if err != nil {
-		if !fromTUI {
-			done <- struct{}{}
-		}
-		if fromTUI {
-			return nil, fmt.Errorf("error building table data: %w", err)
-		}
-		log.Fatalf("Error building table data: %v", err)
-	}
-
 	if !fromTUI {
 		done <- struct{}{}
 		elapsed := time.Since(start)
-		if err := table.RenderWithExecutor(tableData, elapsed, cmdExec); err != nil {
+		if err := table.RenderWithDescriptor(tableData, elapsed, cmdExec, desc); err != nil {
 			log.Fatalf("Error rendering table: %v", err)
 		}
 	}

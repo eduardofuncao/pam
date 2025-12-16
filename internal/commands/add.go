@@ -9,6 +9,7 @@ import (
 
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 func Add(cfg *config.Config) {
@@ -76,7 +77,7 @@ func Add(cfg *config.Config) {
 		}
 	}
 
-	queries[queryName] = db.Query{
+	queries[queryName] = types.Query{
 		Name: queryName,
 		SQL:  querySQL,
 		Id:   db.GetNextQueryId(queries),

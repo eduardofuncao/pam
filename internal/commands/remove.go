@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/eduardofuncao/pam/internal/config"
-	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 func Remove(cfg *config.Config) {
@@ -16,7 +16,7 @@ func Remove(cfg *config.Config) {
 	conn := cfg.Connections[cfg.CurrentConnection]
 	queries := conn.Queries
 
-	query, exists := db.FindQueryWithSelector(queries, os.Args[2])
+	query, exists := types.FindQueryWithSelector(queries, os.Args[2])
 	if exists {
 		delete(conn.Queries, query.Name)
 	} else {

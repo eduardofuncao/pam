@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/eduardofuncao/pam/internal/config"
-	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 func Edit(cfg *config.Config) {
@@ -112,8 +112,8 @@ func editQueries(cfg *config.Config, editorCmd string) {
 	fmt.Printf("✓ Updated queries for connection: %s\n", cfg.CurrentConnection)
 }
 
-func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
-	queries := make(map[string]db.Query)
+func parseSQLQueriesFile(content string) (map[string]types.Query, error) {
+	queries := make(map[string]types.Query)
 	lines := strings.Split(content, "\n")
 
 	var currentQueryName string
@@ -144,7 +144,7 @@ func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
 			if currentQueryName != "" {
 				sql := strings.TrimSpace(currentSQL.String())
 				if sql != "" {
-					queries[currentQueryName] = db.Query{
+					queries[currentQueryName] = types.Query{
 						Name: currentQueryName,
 						SQL:  sql,
 						Id:   queryID,
@@ -166,7 +166,7 @@ func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
 	if currentQueryName != "" {
 		sql := strings.TrimSpace(currentSQL.String())
 		if sql != "" {
-			queries[currentQueryName] = db.Query{
+			queries[currentQueryName] = types.Query{
 				Name: currentQueryName,
 				SQL:  sql,
 				Id:   queryID,

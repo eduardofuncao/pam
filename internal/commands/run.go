@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +10,8 @@ import (
 
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/db/connections"
+	"github.com/eduardofuncao/pam/internal/db/types"
 	"github.com/eduardofuncao/pam/internal/editor"
 	"github.com/eduardofuncao/pam/internal/spinner"
 	"github.com/eduardofuncao/pam/internal/table"
@@ -43,7 +44,7 @@ func RunWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec table.
 
 	selector := args[2]
 	queries := currConn.GetQueries()
-	query, found := db.FindQueryWithSelector(queries, selector)
+	query, found := types.FindQueryWithSelector(queries, selector)
 
 	if !found {
 		rawSQL := strings.Join(args[2:], " ")
@@ -64,14 +65,6 @@ func RunWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec table.
 		}
 	}
 
-	err := currConn.Open()
-	if err != nil {
-		if fromTUI {
-			return nil, fmt.Errorf("could not open connection: %w", err)
-		}
-		log.Fatalf("Could not open the connection to %s/%s: %s", currConn.GetDbType(), currConn.GetName(), err)
-	}
-
 	start := time.Now()
 	var done chan struct{}
 	if !fromTUI {
@@ -79,7 +72,14 @@ func RunWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec table.
 		go spinner.Wait(done)
 	}
 
-	rows, err := currConn.Query(query.Name)
+	desc := &db.QueryDescriptor{
+		Type:       "saved_query",
+		QueryName:  query.Name,
+		SQL:        query.SQL,
+		Connection: currConn,
+	}
+
+	tableData, err := db.ExecuteQuery(desc)
 	if err != nil {
 		if !fromTUI {
 			done <- struct{}{}
@@ -89,39 +89,20 @@ func RunWithArgs(cfg *config.Config, args []string, fromTUI bool, cmdExec table.
 		}
 		log.Fatal("Could not complete query: ", err)
 	}
-	sqlRows, ok := rows.(*sql.Rows)
-	if !ok {
-		if fromTUI {
-			return nil, fmt.Errorf("query did not return *sql.Rows")
-		}
-		log.Fatal("Query did not return *sql.Rows")
-	}
 
-	// Check if query returned any columns
-	columns, err := sqlRows.Columns()
-	if err != nil || len(columns) == 0 {
-		// No columns = DML statement, just show success
+	if tableData == nil {
 		if !fromTUI {
 			done <- struct{}{}
 			elapsed := time.Since(start)
 			fmt.Printf("\nQuery executed successfully (%.2fs)\n", elapsed.Seconds())
 		}
-		sqlRows.Close()
 		return nil, nil
-	}
-
-	tableData, err := db.BuildTableData(sqlRows, query.SQL, currConn)
-	if err != nil {
-		if fromTUI {
-			return nil, fmt.Errorf("error building table data: %w", err)
-		}
-		log.Fatalf("Error building table data: %v", err)
 	}
 
 	if !fromTUI {
 		done <- struct{}{}
 		elapsed := time.Since(start)
-		if err := table.RenderWithExecutor(tableData, elapsed, cmdExec); err != nil {
+		if err := table.RenderWithDescriptor(tableData, elapsed, cmdExec, desc); err != nil {
 			log.Fatalf("Error rendering table: %v", err)
 		}
 	}
@@ -157,7 +138,7 @@ func looksLikeSQL(s string) bool {
 	return false
 }
 
-func executeExternalEditor(currConn db.DatabaseConnection, cfg *config.Config, cmdExec table.CommandExecutor) {
+func executeExternalEditor(currConn connections.DatabaseConnection, cfg *config.Config, cmdExec table.CommandExecutor) {
 	editorCmd := os.Getenv("EDITOR")
 	if editorCmd == "" {
 		log.Fatal("$EDITOR not set")
@@ -193,42 +174,31 @@ func executeExternalEditor(currConn db.DatabaseConnection, cfg *config.Config, c
 	executeRawSQLWithArgs(currConn, query, false, cfg, cmdExec)
 }
 
-func executeOneShot(currConn db.DatabaseConnection, cfg *config.Config, cmdExec table.CommandExecutor) {
-	emptyQuery := db.Query{Name: "", SQL: ""}
+func executeOneShot(currConn connections.DatabaseConnection, cfg *config.Config, cmdExec table.CommandExecutor) {
+	emptyQuery := types.Query{Name: "", SQL: ""}
 	editedQuery, _, _ := editor.EditQuery(emptyQuery, true)
-
-	if err := currConn.Open(); err != nil {
-		log.Fatalf("Could not open the connection: %s", err)
-	}
 
 	start := time.Now()
 	done := make(chan struct{})
 	go spinner.Wait(done)
 
-	rows, err := currConn.QueryDirect(editedQuery.SQL)
+	desc := &db.QueryDescriptor{
+		Type:       "direct_sql",
+		SQL:        editedQuery.SQL,
+		Connection: currConn,
+	}
+
+	tableData, err := db.ExecuteQuery(desc)
 	if err != nil {
 		done <- struct{}{}
 		log.Fatal("Could not complete query: ", err)
 	}
-	sqlRows, ok := rows.(*sql.Rows)
-	if !ok {
-		log.Fatal("Query did not return *sql.Rows")
-	}
 
-	// Check if query returned any columns
-	columns, err := sqlRows.Columns()
-	if err != nil || len(columns) == 0 {
-		// No columns = DML statement, just show success
+	if tableData == nil {
 		done <- struct{}{}
 		elapsed := time.Since(start)
 		fmt.Printf("\nQuery executed successfully (%.2fs)\n", elapsed.Seconds())
-		sqlRows.Close()
 		return
-	}
-
-	tableData, err := db.BuildTableData(sqlRows, editedQuery.SQL, currConn)
-	if err != nil {
-		log.Fatalf("Error building table data: %v", err)
 	}
 
 	done <- struct{}{}
@@ -239,18 +209,11 @@ func executeOneShot(currConn db.DatabaseConnection, cfg *config.Config, cmdExec 
 	}
 }
 
-func executeRawSQL(currConn db.DatabaseConnection, query string, cfg *config.Config) {
+func executeRawSQL(currConn connections.DatabaseConnection, query string, cfg *config.Config) {
 	executeRawSQLWithArgs(currConn, query, false, cfg, nil)
 }
 
-func executeRawSQLWithArgs(currConn db.DatabaseConnection, query string, fromTUI bool, cfg *config.Config, cmdExec table.CommandExecutor) (*db.TableData, error) {
-	if err := currConn.Open(); err != nil {
-		if fromTUI {
-			return nil, fmt.Errorf("could not open connection: %w", err)
-		}
-		log.Fatalf("Could not open the connection: %s", err)
-	}
-
+func executeRawSQLWithArgs(currConn connections.DatabaseConnection, query string, fromTUI bool, cfg *config.Config, cmdExec table.CommandExecutor) (*db.TableData, error) {
 	start := time.Now()
 	var done chan struct{}
 	if !fromTUI {
@@ -258,7 +221,13 @@ func executeRawSQLWithArgs(currConn db.DatabaseConnection, query string, fromTUI
 		go spinner.Wait(done)
 	}
 
-	rows, err := currConn.QueryDirect(query)
+	desc := &db.QueryDescriptor{
+		Type:       "direct_sql",
+		SQL:        query,
+		Connection: currConn,
+	}
+
+	tableData, err := db.ExecuteQuery(desc)
 	if err != nil {
 		if !fromTUI {
 			done <- struct{}{}
@@ -268,39 +237,20 @@ func executeRawSQLWithArgs(currConn db.DatabaseConnection, query string, fromTUI
 		}
 		log.Fatal("Could not complete query: ", err)
 	}
-	sqlRows, ok := rows.(*sql.Rows)
-	if !ok {
-		if fromTUI {
-			return nil, fmt.Errorf("query did not return *sql.Rows")
-		}
-		log.Fatal("Query did not return *sql.Rows")
-	}
 
-	// Check if query returned any columns
-	columns, err := sqlRows.Columns()
-	if err != nil || len(columns) == 0 {
-		// No columns = DML statement, just show success
+	if tableData == nil {
 		if !fromTUI {
 			done <- struct{}{}
 			elapsed := time.Since(start)
 			fmt.Printf("\nQuery executed successfully (%.2fs)\n", elapsed.Seconds())
 		}
-		sqlRows.Close()
 		return nil, nil
-	}
-
-	tableData, err := db.BuildTableData(sqlRows, query, currConn)
-	if err != nil {
-		if fromTUI {
-			return nil, fmt.Errorf("error building table data: %w", err)
-		}
-		log.Fatalf("Error building table data: %v", err)
 	}
 
 	if !fromTUI {
 		done <- struct{}{}
 		elapsed := time.Since(start)
-		if err := table.RenderWithExecutor(tableData, elapsed, cmdExec); err != nil {
+		if err := table.RenderWithDescriptor(tableData, elapsed, cmdExec, desc); err != nil {
 			log.Fatalf("Error rendering table: %v", err)
 		}
 	}

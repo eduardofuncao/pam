@@ -17,3 +17,10 @@ func RenderWithExecutor(tableData *db.TableData, elapsed time.Duration, cmdExec 
 	_, err := p.Run()
 	return err
 }
+
+func RenderWithDescriptor(tableData *db.TableData, elapsed time.Duration, cmdExec CommandExecutor, desc *db.QueryDescriptor) error {
+	model := NewWithDescriptor(tableData, elapsed, cmdExec, desc)
+	p := tea.NewProgram(model)
+	_, err := p.Run()
+	return err
+}

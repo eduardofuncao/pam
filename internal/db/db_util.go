@@ -6,6 +6,9 @@ import (
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/eduardofuncao/pam/internal/db/connections"
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 type Cell struct {
@@ -24,7 +27,7 @@ type TableData struct {
 	Rows       []Row
 	TableName  string
 	SQL        string
-	Connection DatabaseConnection
+	Connection connections.DatabaseConnection
 }
 
 func FormatTableData(rows *sql.Rows) (columns []string, data [][]string, err error) {
@@ -60,7 +63,7 @@ func FormatTableData(rows *sql.Rows) (columns []string, data [][]string, err err
 	return columns, data, nil
 }
 
-func BuildTableData(rows *sql.Rows, sqlQuery string, conn DatabaseConnection) (*TableData, error) {
+func BuildTableData(rows *sql.Rows, sqlQuery string, conn connections.DatabaseConnection) (*TableData, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, fmt.Errorf("getting columns: %w", err)
@@ -134,7 +137,7 @@ func extractTableName(sqlQuery string) string {
 	return ""
 }
 
-func GetNextQueryId(queries map[string]Query) (id int) {
+func GetNextQueryId(queries map[string]types.Query) (id int) {
 	used := make(map[int]bool)
 	for _, query := range queries{
 		used[query.Id] = true

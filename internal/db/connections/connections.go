@@ -1,6 +1,10 @@
-package db
+package connections
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/eduardofuncao/pam/internal/db/types"
+)
 
 type DatabaseConnection interface {
 	Open() error
@@ -14,9 +18,9 @@ type DatabaseConnection interface {
 	GetName() string
 	GetDbType() string
 	GetConnString() string
-	GetQueries() map[string]Query
+	GetQueries() map[string]types.Query
 	GetDB() *sql.DB
 
-	SetQueries(map[string]Query)
+	SetQueries(map[string]types.Query)
 }
 

@@ -1,15 +1,17 @@
-package db
+package connections
 
 import (
 	"database/sql"
 	"errors"
+
+	"github.com/eduardofuncao/pam/internal/db/types"
 )
 
 type BaseConnection struct {
 	Name       string
 	DbType     string
 	ConnString string
-	Queries    map[string]Query
+	Queries    map[string]types.Query
 }
 
 func (b *BaseConnection) Open() error {
@@ -37,5 +39,5 @@ func (b *BaseConnection) ListTables() ([]string, error) {
 func (b *BaseConnection) GetName() string                     { return b.Name }
 func (b *BaseConnection) GetDbType() string                   { return b.DbType }
 func (b *BaseConnection) GetConnString() string               { return b.ConnString }
-func (b *BaseConnection) GetQueries() map[string]Query        { return b.Queries }
-func (b *BaseConnection) SetQueries(queries map[string]Query) { b.Queries = queries }
+func (b *BaseConnection) GetQueries() map[string]types.Query        { return b.Queries }
+func (b *BaseConnection) SetQueries(queries map[string]types.Query) { b.Queries = queries }
