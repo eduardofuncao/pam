@@ -28,6 +28,9 @@ type Model struct {
 	dbConnection    db.DatabaseConnection
 	tableName       string
 	primaryKeyCol   string
+	blinkUpdatedCell bool
+	updatedRow       int
+	updatedCol       int
 }
 
 type blinkMsg struct{}

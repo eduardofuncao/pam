@@ -10,6 +10,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyPress(msg)
 	case blinkMsg:
 		m.blinkCopiedCell = false
+		m.blinkUpdatedCell = false
 	case tea.WindowSizeMsg:
 		return m.handleWindowResize(msg), nil
 	}

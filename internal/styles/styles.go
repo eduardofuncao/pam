@@ -71,4 +71,9 @@ var (
 				Background(lipgloss. Color(ColorHighlight)).
 				Foreground(lipgloss. Color(ColorAccent)).
 				Bold(true)
+
+	TableUpdated = lipgloss.NewStyle().
+				Background(lipgloss. Color(ColorHighlight)).
+				Foreground(lipgloss. Color(ColorAccent)).
+				Bold(true)
 )

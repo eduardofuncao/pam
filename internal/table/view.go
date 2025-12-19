@@ -80,13 +80,18 @@ func (m Model) renderFooter() string {
 	return footer
 }
 
-func (m Model) getCellStyle(row, col int) lipgloss. Style {
+func (m Model) getCellStyle(row, col int) lipgloss.Style {
+	if m.blinkUpdatedCell && m.updatedRow == row && m.updatedCol == col {
+		return styles.TableUpdated
+	}
+	
 	if m.isCellInSelection(row, col) {
 		if m.blinkCopiedCell {
 			return styles.TableCopiedBlink
 		}
 		return styles.TableSelected
 	}
+	
 	return styles.TableCell
 }
 

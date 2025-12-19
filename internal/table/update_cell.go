@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -19,7 +20,7 @@ func (m Model) updateCell() (tea.Model, tea.Cmd) {
 	}
 
 	// Capture the old value
-	oldValue := m.data[m.selectedRow][m.selectedCol]
+	// oldValue := m.data[m.selectedRow][m.selectedCol]
 
 	updateStmt := m.buildUpdateStatement()
 
@@ -30,20 +31,19 @@ func (m Model) updateCell() (tea.Model, tea.Cmd) {
 
 	tmpFile, err := os.CreateTemp("", "pam-update-*.sql")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating temp file: %v\n", err)
+		fmt. Fprintf(os.Stderr, "Error creating temp file: %v\n", err)
 		return m, tea.Quit
 	}
-	tmpPath := tmpFile.Name()
+	tmpPath := tmpFile. Name()
 	defer os.Remove(tmpPath)
 
 	if _, err := tmpFile.Write([]byte(updateStmt)); err != nil {
 		tmpFile.Close()
-		fmt. Fprintf(os.Stderr, "Error writing temp file: %v\n", err)
-		return m, tea. Quit
+		fmt.Fprintf(os.Stderr, "Error writing temp file: %v\n", err)
+		return m, tea.Quit
 	}
 	tmpFile.Close()
 
-	// Restore terminal to normal mode before opening editor
 	tea.ExitAltScreen()
 
 	cmd := exec.Command(editorCmd, tmpPath)
@@ -51,27 +51,40 @@ func (m Model) updateCell() (tea.Model, tea.Cmd) {
 	cmd.Stdout = os.Stdout
 	cmd. Stderr = os.Stderr
 	
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running editor: %v\n", err)
-		return m, tea. Quit
+	if err := cmd. Run(); err != nil {
+		fmt.Fprintf(os. Stderr, "Error running editor: %v\n", err)
+		tea.EnterAltScreen()
+		return m, tea.Quit
 	}
 
 	editedSQL, err := os.ReadFile(tmpPath)
 	if err != nil {
-		fmt. Fprintf(os.Stderr, "Error reading edited file: %v\n", err)
-		return m, tea. Quit
+		fmt.Fprintf(os.Stderr, "Error reading edited file: %v\n", err)
+		tea.EnterAltScreen()
+		return m, tea.Quit
 	}
 
-	// Extract the new value from the edited SQL
-	newValue := extractNewValue(string(editedSQL), m. columns[m.selectedCol])
+	newValue := extractNewValue(string(editedSQL), m.columns[m.selectedCol])
+
+	tea.EnterAltScreen()
 
 	if err := m.executeUpdate(string(editedSQL)); err != nil {
-		fmt. Fprintf(os.Stderr, "Error executing update: %v\n", err)
-	} else {
-		fmt.Printf("\nUpdate executed successfully: %s --> %s\n", oldValue, newValue)
+		return m, nil
 	}
+	
+	m.data[m.selectedRow][m.selectedCol] = newValue
+	
+	m.blinkUpdatedCell = true
+	m.updatedRow = m.selectedRow
+	m.updatedCol = m.selectedCol
+	
+	return m, m.blinkCmd()
+}
 
-	return m, tea.Quit
+func (m Model) blinkCmd() tea.Cmd {
+	return tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+		return blinkMsg{}
+	})
 }
 
 func (m Model) buildUpdateStatement() string {
