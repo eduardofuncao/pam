@@ -69,58 +69,132 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 	
 	upperTableName := strings.ToUpper(tableName)
 	
+	// First, get the current schema/owner
+	var currentOwner string
+	ownerQuery := `SELECT USER FROM DUAL`
+	row := oc.db.QueryRow(ownerQuery)
+	if err := row.Scan(&currentOwner); err != nil {
+		// If we can't get the owner, we'll try without it
+		currentOwner = ""
+	}
+	
+	// Primary key query
 	pkQuery := `
 		SELECT cols.column_name
 		FROM all_constraints cons
 		JOIN all_cons_columns cols ON cons.constraint_name = cols.constraint_name
 			AND cons.owner = cols.owner
 		WHERE cons.constraint_type = 'P'
-		AND cons.table_name = :1
+		AND cons. table_name = :1
 		AND ROWNUM = 1
 		ORDER BY cols.position
 	`
 	
-	rows, err := oc.db.Query(pkQuery, upperTableName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query oracle primary key: %w", err)
+	// Add owner filter if we have it
+	if currentOwner != "" {
+		pkQuery = `
+			SELECT cols.column_name
+			FROM all_constraints cons
+			JOIN all_cons_columns cols ON cons.constraint_name = cols.constraint_name
+				AND cons.owner = cols.owner
+			WHERE cons.constraint_type = 'P'
+			AND cons. table_name = :1
+			AND cons.owner = :2
+			AND ROWNUM = 1
+			ORDER BY cols.position
+		`
 	}
-	defer rows.Close()
 	
 	metadata := &TableMetadata{
 		TableName: tableName,
 	}
 	
+	// Execute PK query
+	var rows *sql.Rows
+	var err error
+	if currentOwner != "" {
+		rows, err = oc.db. Query(pkQuery, upperTableName, currentOwner)
+	} else {
+		rows, err = oc.db.Query(pkQuery, upperTableName)
+	}
+	
+	if err != nil {
+		return nil, fmt.Errorf("failed to query oracle primary key: %w", err)
+	}
+	defer rows.Close()
+	
 	if rows.Next() {
 		var pkColumn string
-		if err := rows.Scan(&pkColumn); err == nil {
+		if err := rows. Scan(&pkColumn); err == nil {
 			metadata.PrimaryKey = pkColumn
 		}
 	}
 	
+	// Column metadata query - FILTER BY OWNER TO AVOID DUPLICATES
 	colQuery := `
-		SELECT column_name,
-		       CASE
-		           WHEN data_type IN ('VARCHAR2', 'CHAR', 'NVARCHAR2', 'NCHAR') 
-		           THEN data_type || '(' || data_length || ')'
-		           WHEN data_type = 'NUMBER' AND data_precision IS NOT NULL
-		           THEN data_type || '(' || data_precision || ',' || NVL(data_scale, 0) || ')'
-		           ELSE data_type
-		       END as full_type
+		SELECT column_name, data_type, data_length, data_precision, data_scale
 		FROM all_tab_columns
 		WHERE table_name = :1
 		ORDER BY column_id
 	`
 	
-	colRows, err := oc.db.Query(colQuery, upperTableName)
-	if err == nil {
-		defer colRows.Close()
-		for colRows.Next() {
-			var colName, colType string
-			if err := colRows.Scan(&colName, &colType); err == nil {
-				metadata.Columns = append(metadata.Columns, colName)
-				metadata.ColumnTypes = append(metadata.ColumnTypes, colType)  // ADD THIS
-			}
+	// Add owner filter if we have it
+	if currentOwner != "" {
+		colQuery = `
+			SELECT column_name, data_type, data_length, data_precision, data_scale
+			FROM all_tab_columns
+			WHERE table_name = :1
+			  AND owner = :2
+			ORDER BY column_id
+		`
+	}
+	
+	// Execute column query
+	var colRows *sql.Rows
+	if currentOwner != "" {
+		colRows, err = oc. db.Query(colQuery, upperTableName, currentOwner)
+	} else {
+		colRows, err = oc.db. Query(colQuery, upperTableName)
+	}
+	
+	if err != nil {
+		return metadata, nil // Return partial metadata
+	}
+	defer colRows. Close()
+	
+	for colRows.Next() {
+		var colName, dataType string
+		var dataLength, dataPrecision, dataScale sql.NullInt64
+		
+		if err := colRows.Scan(&colName, &dataType, &dataLength, &dataPrecision, &dataScale); err != nil {
+			continue
 		}
+		
+		// Build type string
+		var fullType string
+		if dataType == "CHAR" || dataType == "VARCHAR2" || dataType == "NVARCHAR2" || dataType == "NCHAR" {
+			if dataLength.Valid {
+				fullType = fmt. Sprintf("%s(%d)", dataType, dataLength.Int64)
+			} else {
+				fullType = dataType
+			}
+		} else if dataType == "NUMBER" {
+			if dataPrecision.Valid && dataScale.Valid {
+				fullType = fmt. Sprintf("%s(%d,%d)", dataType, dataPrecision.Int64, dataScale.Int64)
+			} else if dataPrecision.Valid {
+				fullType = fmt.Sprintf("%s(%d)", dataType, dataPrecision.Int64)
+			} else {
+				fullType = dataType
+			}
+		} else if dataType == "BLOB" || dataType == "CLOB" {
+			// Don't show length for LOBs
+			fullType = dataType
+		} else {
+			fullType = dataType
+		}
+		
+		metadata.Columns = append(metadata.Columns, colName)
+		metadata.ColumnTypes = append(metadata.ColumnTypes, fullType)
 	}
 	
 	return metadata, nil

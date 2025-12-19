@@ -52,7 +52,7 @@ func (m Model) renderHeader() string {
 		cells = append(cells, styles.TableHeader.Render(content))
 	}
 
-	return strings.Join(cells, styles. TableBorder.Render("│"))
+	return strings.Join(cells, styles.TableBorder.Render("│"))
 }
 
 func (m Model) renderDataRow(rowIndex int) string {
@@ -69,25 +69,49 @@ func (m Model) renderDataRow(rowIndex int) string {
 }
 
 func (m Model) renderFooter() string {
+	currentCellValue := ""
+	columnType := ""
+	
+	if m.selectedRow >= 0 && m.selectedRow < len(m.data) &&
+	   m.selectedCol >= 0 && m.selectedCol < len(m.data[m. selectedRow]) {
+		currentCellValue = m.data[m.selectedRow][m.selectedCol]
+	}
+	
+	if m.selectedCol >= 0 && m.selectedCol < len(m.columnTypes) {
+		columnType = m.columnTypes[m.selectedCol]
+	}
+	
+	maxPreviewWidth := m. width - len(columnType) - 10
+	displayValue := currentCellValue
+	if len(displayValue) > maxPreviewWidth && maxPreviewWidth > 0 {
+		displayValue = displayValue[: maxPreviewWidth-3] + "..."
+	}
+	
+	cellPreview := fmt. Sprintf("%s %s\n",
+		styles.Faint. Render(columnType),
+		styles.TableCell.Render(displayValue))
+	
 	updateInfo := ""
 	if m.tableName != "" && m.primaryKeyCol != "" {
-		updateInfo = styles. TableHeader.Render("u") + styles.Faint. Render("pdate")
+		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate")
 	} else if m.tableName != "" {
-		updateInfo = styles. TableHeader.Render("u") + styles.Faint. Render("pdate (no PK)")
+		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate (no PK)")
 	}
 
-	sel := styles.TableHeader.Render("v") + styles.Faint.Render("sel")
+	sel := styles.TableHeader. Render("v") + styles.Faint.Render("sel")
 	del := styles.TableHeader.Render("d") + styles.Faint.Render("el")
 	yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
 	cmd := styles.TableHeader. Render(";") + styles.Faint.Render("cmd")
 	quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
 	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
 
-	footer := fmt.Sprintf("\n%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
-		styles.  Faint.Render(fmt. Sprintf("%dx%d", m.numRows(), m.numCols())),
+	footer := fmt.Sprintf("\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+		cellPreview,
+		styles.Faint.Render(fmt. Sprintf("%dx%d", m. numRows(), m.numCols())),
 		styles.Faint.Render(fmt. Sprintf("In %.2fs", m.elapsed.Seconds())),
-		styles.Faint.  Render(fmt. Sprintf("[%d/%d]", m. selectedRow+1, m.selectedCol+1)),
+		styles.Faint. Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
 		updateInfo, del, yank, sel, cmd, quit, hjkl)
+	
 	return footer
 }
 
@@ -111,10 +135,15 @@ func (m Model) getCellStyle(row, col int) lipgloss.Style {
 }
 
 func formatCell(content string) string {
-	if len(content) > cellWidth {
-		return content[:cellWidth-1] + "…"
+	runes := []rune(content)
+	runeCount := len(runes)
+	
+	if runeCount > cellWidth {
+		return string(runes[:cellWidth-1]) + "…"
 	}
-	return fmt.Sprintf("%-*s", cellWidth, content)
+	
+	padding := cellWidth - runeCount
+	return content + strings.Repeat(" ", padding)
 }
 
 func getTypeIcon(typeName string) string {
