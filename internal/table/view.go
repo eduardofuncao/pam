@@ -60,14 +60,24 @@ func (m Model) renderDataRow(rowIndex int) string {
 func (m Model) renderFooter() string {
 	updateInfo := ""
 	if m.tableName != "" && m.primaryKeyCol != "" {
-		updateInfo = " | Update: u"
+		updateInfo = styles. TableHeader.Render("u") + styles.Faint. Render("pdate")
 	} else if m.tableName != "" {
-		updateInfo = " | Update: u (no PK)"
+		updateInfo = styles. TableHeader.Render("u") + styles.Faint. Render("pdate (no PK)")
 	}
 
-	footer := fmt.Sprintf("\nIn %.2fs | Position: Row %d/%d, Col %d/%d | Scroll: H/L (left/right), K/J (up/down) | Copy: y/enter%s",
-		m.elapsed.Seconds(), m.selectedRow+1, m.numRows(), m.selectedCol+1, m.numCols(), updateInfo)
-	return styles.Faint.Render(footer)
+	sel := styles.TableHeader.Render("v") + styles.Faint.Render("sel")
+	del := styles.TableHeader.Render("d") + styles.Faint.Render("el")
+	yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
+	cmd := styles.TableHeader. Render(";") + styles.Faint.Render("cmd")
+	quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
+	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
+
+	footer := fmt.Sprintf("\n%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+		styles.  Faint.Render(fmt. Sprintf("%dx%d", m.numRows(), m.numCols())),
+		styles.Faint.Render(fmt. Sprintf("In %.2fs", m.elapsed.Seconds())),
+		styles.Faint.  Render(fmt. Sprintf("[%d/%d]", m. selectedRow+1, m.selectedCol+1)),
+		updateInfo, del, yank, sel, cmd, quit, hjkl)
+	return footer
 }
 
 func (m Model) getCellStyle(row, col int) lipgloss. Style {
