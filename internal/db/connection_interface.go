@@ -1,10 +1,13 @@
 package db
 
+import "database/sql"
+
 type DatabaseConnection interface {
 	Open() error
 	Ping() error
 	Close() error
 	Query(queryName string, args ...any) (any, error)
+	ExecQuery(sql string, args ...any) (*sql.Rows, error)
 	Exec(sql string, args ...any) error
 	GetTableMetadata(tableName string) (*TableMetadata, error)
 	BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string

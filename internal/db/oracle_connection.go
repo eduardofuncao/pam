@@ -53,6 +53,10 @@ func (oc *OracleConnection) Query(queryName string, args ...any) (any, error) {
 	return oc.db.Query(query.SQL, args...)
 }
 
+func (oc *OracleConnection) ExecQuery(sql string, args ... any) (*sql.Rows, error) {
+	return oc.db.Query(sql, args...)
+}
+
 func (oc *OracleConnection) Exec(sql string, args ... any) error {
 	_, err := oc.db.Exec(sql, args...)
 	return err

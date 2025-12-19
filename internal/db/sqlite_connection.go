@@ -53,6 +53,10 @@ func (s *SQLiteConnection) Query(queryName string, args ...any) (any, error) {
 	return s.db.Query(query.SQL, args...)
 }
 
+func (s *SQLiteConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+	return s.db.Query(sql, args...)
+}
+
 func (s *SQLiteConnection) Exec(sql string, args ...any) error {
 	_, err := s.db.Exec(sql, args...)
 	return err

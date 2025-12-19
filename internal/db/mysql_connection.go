@@ -53,6 +53,10 @@ func (m *MySQLConnection) Query(queryName string, args ...any) (any, error) {
 	return m.db.Query(query. SQL, args...)
 }
 
+func (m *MySQLConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+	return m.db.Query(sql, args...)
+}
+
 func (m *MySQLConnection) Exec(sql string, args ...any) error {
 	_, err := m.db.Exec(sql, args...)
 	return err

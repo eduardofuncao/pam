@@ -182,67 +182,202 @@ func (a *App) handleQuery() {
 		}
 	}
 
-	currConn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
+	if a.config.CurrentConnection == "" {
+		printError("No active connection.  Use 'pam switch <connection>' first")
+	}
+
+	currConn := config.FromConnectionYaml(a.config. Connections[a.config.CurrentConnection])
 
 	var query db.Query
-	if selector != "" {
+	isInlineSQL := false
+	
+	// Check if selector looks like an inline SQL query
+	if selector != "" && isLikelySQL(selector) {
+		isInlineSQL = true
+		query = db.Query{
+			Name: "<inline>",
+			SQL:   selector,
+			Id:   -1,
+		}
+		
+		// Allow editing inline SQL if requested
+		if editMode {
+			editedQuery, submitted, err := editor.EditQuery(query, true)
+			if err != nil {
+				printError("Error opening editor: %v", err)
+			}
+			if ! submitted {
+				fmt.Println(styles. Faint.Render("Query execution cancelled"))
+				return
+			}
+			query = editedQuery
+		}
+	} else if selector != "" {
+		// Treat as saved query name/id lookup
 		queries := currConn.GetQueries()
 		q, found := db.FindQueryWithSelector(queries, selector)
 		if !found {
 			printError("Could not find query with name/id: %v", selector)
 		}
 		query = q
+		
+		// Edit the saved query if requested
+		if editMode {
+			editedQuery, submitted, err := editor.EditQuery(query, true)
+			if err != nil {
+				printError("Error opening editor: %v", err)
+			}
+			if submitted {
+				a.config.Connections[a. config.CurrentConnection]. Queries[query.Name] = editedQuery
+			}
+			query = editedQuery
+		}
 	} else {
-		query = a.config.Connections[a.config.CurrentConnection].LastQuery
-		if query.Name == "" {
-			printError("No last query found.  Usage: pam query/run <query-name>")
+		// No selector provided, use last query
+		query = a.config.Connections[a. config.CurrentConnection].LastQuery
+		if query. Name == "" {
+			printError("No last query found.  Usage: pam query/run <query-name|sql>")
+		}
+		
+		if editMode {
+			editedQuery, submitted, err := editor.EditQuery(query, true)
+			if err != nil {
+				printError("Error opening editor: %v", err)
+			}
+			if submitted && query.Name != "<inline>" {
+				a.config.Connections[a.config. CurrentConnection].Queries[query. Name] = editedQuery
+			}
+			query = editedQuery
 		}
 	}
-
-	editedQuery, submitted, err := editor.EditQuery(query, editMode)
-	if submitted {
-		a.config.Connections[a.config.CurrentConnection].Queries[query.Name] = editedQuery
-	}
-	a.config.Connections[a.config.CurrentConnection].LastQuery = editedQuery
-	a.config.Save()
-
-	if err = currConn.Open(); err != nil {
-		printError("Could not open the connection to %s/%s: %s", currConn.GetDbType(), currConn.GetName(), err)
+	
+	// Save last query only if it's not inline
+	if !isInlineSQL {
+		a.config.Connections[a.config. CurrentConnection].LastQuery = query
+		a.config.Save()
 	}
 
+	// Display the query that will be executed (if not inline)
+	if !isInlineSQL {
+		fmt.Printf("%s\n", styles.Title. Render("\n◆ "+query.Name))
+		fmt.Println(editor.HighlightSQL(editor.FormatSQLWithLineBreaks(query. SQL)))
+		fmt.Println(styles.Separator.Render("──────────────────────────────────────────────────────────"))
+	}
+
+	// Open database connection
+	if err := currConn.Open(); err != nil {
+		printError("Could not open the connection to %s/%s:  %s", 
+			currConn. GetDbType(), currConn.GetName(), err)
+	}
+	defer currConn.Close()
+
+	// Start timing and spinner
 	start := time.Now()
 	done := make(chan struct{})
 	go spinner.Wait(done)
 
-	rows, err := currConn.Query(query.Name)
-	if err != nil {
+	// Determine query type and execute accordingly
+	trimmedSQL := strings.TrimSpace(strings.ToUpper(query.SQL))
+	isSelectQuery := strings.HasPrefix(trimmedSQL, "SELECT") ||
+		strings.HasPrefix(trimmedSQL, "WITH") ||
+		strings.HasPrefix(trimmedSQL, "SHOW") ||
+		strings.HasPrefix(trimmedSQL, "DESCRIBE") ||
+		strings.HasPrefix(trimmedSQL, "DESC") ||
+		strings.HasPrefix(trimmedSQL, "EXPLAIN") ||
+		strings.HasPrefix(trimmedSQL, "PRAGMA")
+
+	if isSelectQuery {
+		// Handle SELECT queries (returns rows)
+		var rows any
+		var err error
+		
+		if isInlineSQL {
+			rows, err = currConn.ExecQuery(query.SQL)
+		} else {
+			rows, err = currConn.Query(query.Name)
+		}
+		
+		if err != nil {
+			done <- struct{}{}
+			printError("Could not complete query: %v", err)
+		}
+		
+		columns, data, err := db.FormatTableData(rows. (*sql.Rows))
+		if err != nil {
+			done <- struct{}{}
+			printError("Could not format table data: %v", err)
+		}
+
 		done <- struct{}{}
-		printError("Could not complete query: %v", err)
-	}
-	columns, data, err := db.FormatTableData(rows.(*sql.Rows))
-	if err != nil {
-		done <- struct{}{}
-		printError("Could not format table data: %v", err)
-	}
+		elapsed := time.Since(start)
 
-	done <- struct{}{}
-	elapsed := time.Since(start)
+		// Try to infer table metadata for update/delete functionality
+		metadata, err := db.InferTableMetadata(currConn, query)
+		tableName := ""
+		primaryKeyCol := ""
 
-	metadata, err := db.InferTableMetadata(currConn, query)
-	tableName := ""
-	primaryKeyCol := ""
+		if err == nil && metadata != nil {
+			tableName = metadata.TableName
+			primaryKeyCol = metadata.PrimaryKey
+		} else {
+			if ! isInlineSQL {
+				fmt.Fprintf(os.Stderr, styles.Faint.Render("Warning: Could not extract table metadata:  %v\n"), err)
+				fmt.Fprintf(os. Stderr, styles.Faint. Render("Update functionality will be limited.\n"))
+			}
+		}
 
-	if err == nil && metadata != nil {
-		tableName = metadata.TableName
-		primaryKeyCol = metadata.PrimaryKey
+		// Render the table view
+		if err := table.Render(columns, data, elapsed, currConn, tableName, primaryKeyCol); err != nil {
+			printError("Error rendering table: %v", err)
+		}
 	} else {
-		fmt.Fprintf(os.Stderr, styles.Faint.Render("Warning: Could not extract table metadata: %v\n"), err)
-		fmt.Fprintf(os.Stderr, styles.Faint.Render("Update functionality will be limited.\n"))
+		// Handle INSERT/UPDATE/DELETE/CREATE etc. (no rows returned)
+		var err error
+		
+		if isInlineSQL {
+			err = currConn. Exec(query.SQL)
+		} else {
+			// For saved queries, we need to execute the SQL directly
+			err = currConn.Exec(query.SQL)
+		}
+		
+		done <- struct{}{}
+		elapsed := time.Since(start)
+		
+		if err != nil {
+			printError("Could not execute command: %v", err)
+		}
+		
+		// Show success message
+		fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Command executed successfully in %.2fs", elapsed.Seconds())))
+		
+		// For saved queries, show the SQL that was executed
+		if !isInlineSQL {
+			fmt. Println(styles. Faint.Render("\nExecuted SQL:"))
+			fmt.Println(editor.HighlightSQL(query.SQL))
+		}
 	}
+}
 
-	if err := table.Render(columns, data, elapsed, currConn, tableName, primaryKeyCol); err != nil {
-		printError("Error rendering table: %v", err)
+func isLikelySQL(s string) bool {
+	upper := strings.ToUpper(strings.TrimSpace(s))
+	
+	// Check for common SQL keywords that start queries
+	sqlKeywords := []string{
+		"SELECT", "INSERT", "UPDATE", "DELETE",
+		"CREATE", "DROP", "ALTER", "TRUNCATE",
+		"WITH", "SHOW", "DESCRIBE", "DESC", "EXPLAIN",
+		"GRANT", "REVOKE", "BEGIN", "COMMIT", "ROLLBACK",
+		"PRAGMA", // SQLite specific
 	}
+	
+	for _, keyword := range sqlKeywords {
+		if strings.HasPrefix(upper, keyword+" ") || upper == keyword {
+			return true
+		}
+	}
+	
+	return false
 }
 
 func (a *App) handleList() {

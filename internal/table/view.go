@@ -120,81 +120,81 @@ func formatCell(content string) string {
 func getTypeIcon(typeName string) string {
 	upper := strings.ToUpper(typeName)
 	
-	// String/Text types - Latin letter A
+	// String/Text types
 	if strings.Contains(upper, "CHAR") || strings.Contains(upper, "TEXT") || 
 	   strings.Contains(upper, "STRING") || strings.Contains(upper, "CLOB") ||
 	   strings.Contains(upper, "VARCHAR") || strings.Contains(upper, "NVARCHAR") {
-		return "α" // Greek alpha (text/string)
+		return "α"
 	}
 	
-	// Integer types - Hash/number sign
+	// Integer types
 	if strings.Contains(upper, "INT") || strings.Contains(upper, "SERIAL") ||
 	   strings.Contains(upper, "BIGINT") || strings.Contains(upper, "SMALLINT") ||
 	   strings.Contains(upper, "TINYINT") {
-		return "№" // Numero sign (integers)
+		return "№"
 	}
 	
-	// Decimal/Float types - Almost equal
+	// Decimal/Float types
 	if strings.Contains(upper, "DECIMAL") || strings.Contains(upper, "NUMERIC") ||
 	   strings.Contains(upper, "FLOAT") || strings.Contains(upper, "DOUBLE") ||
 	   strings.Contains(upper, "REAL") || strings.Contains(upper, "NUMBER") ||
 	   strings.Contains(upper, "MONEY") {
-		return "≈" // Almost equal (floating point)
+		return "≈"
 	}
 	
-	// Date types - Calendar symbol
+	// Date types
 	if strings.Contains(upper, "DATE") && !strings.Contains(upper, "TIME") {
-		return "⊞" // Calendar (date)
+		return "⊞"
 	}
 	
-	// Time/Timestamp types - Clock
+	// Time/Timestamp types
 	if strings.Contains(upper, "TIME") || strings.Contains(upper, "TIMESTAMP") {
-		return "◷" // Alarm clock (time)
+		return "◷"
 	}
 	
-	// Boolean types - Checkmark
+	// Boolean types
 	if strings.Contains(upper, "BOOL") || strings.Contains(upper, "BIT") {
-		return "✓" // Check mark (boolean)
+		return "✓"
 	}
 	
-	// Binary/Blob types - Diamond
+	// Binary/Blob types
 	if strings.Contains(upper, "BLOB") || strings.Contains(upper, "BINARY") ||
 	   strings.Contains(upper, "BYTEA") || strings.Contains(upper, "RAW") ||
 	   strings.Contains(upper, "VARBINARY") || strings.Contains(upper, "IMAGE") {
-		return "◆" // Diamond (binary)
+		return "◆"
 	}
 	
-	// JSON types - Braces
+	// JSON types
 	if strings.Contains(upper, "JSON") || strings.Contains(upper, "JSONB") {
-		return "{ }" // Curly braces (JSON)
+		return "{ }"
 	}
 	
-	// UUID types - Key symbol
+	// UUID types
 	if strings.Contains(upper, "UUID") || strings.Contains(upper, "GUID") {
-		return "I" // Three lines converging (unique ID)
+		return "I"
 	}
 	
-	// Array types - List symbol
+	// Array types
 	if strings.Contains(upper, "ARRAY") || strings.HasSuffix(upper, "[]") {
-		return "≡" // Triple bar (list/array)
+		return "≡"
 	}
 	
-	// Enum types - Ellipsis
+	// Enum types
 	if strings.Contains(upper, "ENUM") || strings.Contains(upper, "SET") {
-		return "⋮" // Midline ellipsis (enumeration)
+		return "⋮"
 	}
 	
 	// XML types
 	if strings.Contains(upper, "XML") {
-		return "⟨⟩" // Angle brackets (XML)
+		return "⟨⟩"
 	}
 	
 	// Geometric/Spatial types
 	if strings. Contains(upper, "GEOMETRY") || strings.Contains(upper, "POINT") ||
 	   strings.Contains(upper, "POLYGON") || strings.Contains(upper, "LINE") {
-		return "◉" // Fisheye (geometric)
+		return "◉"
 	}
 	
 	// Default fallback
-	return "•" // Bullet point (unknown)
+	return "•"
 }

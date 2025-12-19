@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,6 +26,9 @@ func (b *BaseConnection) Close() error {
 }
 func (b *BaseConnection) Query(name string, args ...any) (any, error) {
 	return struct{}{}, errors.New("Close() not implemented for base connection")
+}
+func (b *BaseConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+	return nil, errors.New("ExecQuery() not implemented for base connection")
 }
 func (b *BaseConnection) Exec(sql string, args ...any) error {
 	return errors. New("Exec() not implemented for base connection")

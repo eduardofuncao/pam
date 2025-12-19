@@ -53,6 +53,10 @@ func (p *PostgresConnection) Query(queryName string, args ...any) (any, error) {
 	return p.db.Query(query.SQL, args...)
 }
 
+func (p *PostgresConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+	return p.db.Query(sql, args...)
+}
+
 func (p *PostgresConnection) Exec(sql string, args ...any) error {
 	_, err := p.db. Exec(sql, args...)
 	return err
