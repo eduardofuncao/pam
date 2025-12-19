@@ -8,6 +8,14 @@ import (
 	"github.com/eduardofuncao/pam/internal/styles"
 )
 
+func (a *App) handleHelp() {
+	if len(os.Args) == 2 {
+		a.PrintGeneralHelp()
+	} else {
+		a.PrintCommandHelp()
+	}
+}
+
 func (a *App) PrintGeneralHelp() {
 	// Header
 	fmt.Println(styles.Title.Render("Pam's database drawer - query manager for your databases"))

@@ -9,7 +9,31 @@ import (
 
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/styles"
 )
+
+func (a *App) handleEdit() {
+	editorCmd := os.Getenv("EDITOR")
+	if editorCmd == "" {
+		editorCmd = "vim"
+	}
+
+	editType := "config"
+	if len(os.Args) >= 3 {
+		editType = os.Args[2]
+	}
+
+	switch editType {
+	case "config":
+		a.editConfig(editorCmd)
+		fmt.Println(styles.Success.Render("✓ Config file edited"))
+	case "queries":
+		a.editQueries(editorCmd)
+		fmt.Println(styles.Success. Render("✓ Queries edited"))
+	default:
+		printError("Unknown edit type: %s.   Use 'config' or 'queries'", editType)
+	}
+}
 
 func (a *App) editConfig(editorCmd string) {
 	cmd := exec.Command(editorCmd, config.CfgFile)
