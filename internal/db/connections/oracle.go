@@ -22,6 +22,9 @@ func NewOracleConnection(name, connStr string) (*OracleConnection, error) {
 }
 
 func (oc *OracleConnection) Open() error {
+	if oc.db != nil {
+		return nil
+	}
 	db, err := sql.Open("godror", oc.ConnString)
 	if err != nil {
 		return err

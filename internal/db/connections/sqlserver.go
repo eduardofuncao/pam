@@ -22,6 +22,9 @@ func NewSqlServerConnection(name, connStr string) (*SqlServerConnection, error) 
 }
 
 func (s *SqlServerConnection) Open() error {
+	if s.db != nil {
+		return nil
+	}
 	db, err := sql.Open("sqlserver", s.ConnString)
 	if err != nil {
 		return err

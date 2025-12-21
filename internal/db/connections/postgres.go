@@ -22,6 +22,9 @@ func NewPostgresConnection(name, connStr string) (*PostgresConnection, error) {
 }
 
 func (p *PostgresConnection) Open() error {
+	if p.db != nil {
+		return nil
+	}
 	db, err := sql.Open("postgres", p.ConnString)
 	if err != nil {
 		return err
