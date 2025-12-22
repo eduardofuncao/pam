@@ -11,13 +11,11 @@ import (
 )
 
 func (m Model) deleteRow() (tea.Model, tea.Cmd) {
-	if m.selectedRow < 0 || m. selectedRow >= m.numRows() {
+	if m.selectedRow < 0 || m.selectedRow >= m.numRows() {
 		return m, nil
 	}
 
 	if m.primaryKeyCol == "" {
-		fmt.Fprintf(os.Stderr, "\nCannot delete:  No primary key defined for this table\n")
-		tea.EnterAltScreen()
 		return m, nil
 	}
 
@@ -28,69 +26,73 @@ func (m Model) deleteRow() (tea.Model, tea.Cmd) {
 		editorCmd = "vim"
 	}
 
-	tmpFile, err := os.CreateTemp("", "pam-delete-*.sql")
+	tmpFile, err := os.CreateTemp("", "pam-delete-*. sql")
 	if err != nil {
-		fmt. Fprintf(os.Stderr, "Error creating temp file: %v\n", err)
-		return m, tea.Quit
+		return m, nil
 	}
-	tmpPath := tmpFile. Name()
-	defer os.Remove(tmpPath)
+	tmpPath := tmpFile.Name()
 
 	header := `-- DELETE Statement
--- WARNING: This will permanently delete data! 
--- Ensure the WHERE clause is present and correct before saving. 
+-- WARNING: This will permanently delete data!   
+-- Ensure the WHERE clause is present and correct before saving.  
+-- To cancel, delete all content and save.    
 --
 `
 	content := header + deleteStmt
 
 	if _, err := tmpFile.Write([]byte(content)); err != nil {
 		tmpFile.Close()
-		fmt.Fprintf(os. Stderr, "Error writing temp file: %v\n", err)
-		return m, tea. Quit
+		os.Remove(tmpPath)
+		return m, nil
 	}
 	tmpFile.Close()
 
-	tea.ExitAltScreen()
+	// Store the row index before entering async operation
+	rowToDelete := m.selectedRow
 
+	// Use tea.ExecProcess to run the editor
 	cmd := exec.Command(editorCmd, tmpPath)
-	cmd.Stdin = os. Stdin
-	cmd.Stdout = os.Stdout
-	cmd. Stderr = os.Stderr
+	
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		// Read the edited file BEFORE removing it
+		editedSQL, readErr := os.ReadFile(tmpPath)
+		
+		// Now remove the temp file
+		os.Remove(tmpPath)
+		
+		if err != nil || readErr != nil {
+			return nil
+		}
 
-	if err := cmd.Run(); err != nil {
-		fmt. Fprintf(os.Stderr, "Error running editor: %v\n", err)
-		tea.EnterAltScreen()
-		return m, tea.Quit
-	}
+		return deleteCompleteMsg{
+			sql:      string(editedSQL),
+			rowIndex: rowToDelete,
+		}
+	})
+}
 
-	editedSQL, err := os.ReadFile(tmpPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading edited file: %v\n", err)
-		tea.EnterAltScreen()
-		return m, tea.Quit
-	}
+// Message sent when delete editor completes
+type deleteCompleteMsg struct {
+	sql      string
+	rowIndex int
+}
 
-	tea.EnterAltScreen()
-
-	sqlStr := string(editedSQL)
-
-	if err := validateDeleteStatement(sqlStr); err != nil {
-		fmt. Fprintf(os.Stderr, "\nDelete validation failed: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Press any key to continue.. .\n")
-		var buf [1]byte
-		os.Stdin.Read(buf[: ])
+// Handle the delete complete message
+func (m Model) handleDeleteComplete(msg deleteCompleteMsg) (tea.Model, tea.Cmd) {
+	// Validate the delete statement
+	if err := validateDeleteStatement(msg. sql); err != nil {
+		// Validation failed (empty SQL, no WHERE clause, etc.) - just return to table
 		return m, nil
 	}
 
-	if err := m.executeDelete(sqlStr); err != nil {
-		fmt.Fprintf(os.Stderr, "\nError executing delete: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Press any key to continue.. .\n")
-		var buf [1]byte
-		os.Stdin.Read(buf[: ])
+	// Execute the delete
+	if err := m.executeDelete(msg.sql); err != nil {
+		// Execution failed - just return without deleting
 		return m, nil
 	}
 
-	m.data = append(m.data[:m.selectedRow], m.data[m.selectedRow+1:]...)
+	// Successfully deleted - update the model data
+	m.data = append(m.data[:msg.rowIndex], m.data[msg.rowIndex+1:]...)
 
 	if m.selectedRow >= m.numRows() && m.numRows() > 0 {
 		m.selectedRow = m.numRows() - 1
@@ -100,10 +102,14 @@ func (m Model) deleteRow() (tea.Model, tea.Cmd) {
 		m.offsetY = m.numRows() - 1
 	}
 
-	m.blinkDeletedRow = true
+	m. blinkDeletedRow = true
 	m.deletedRow = m.selectedRow
 
-	return m, m.blinkCmd()
+	// Force a full re-render with screen clear
+	return m, tea. Batch(
+		tea.ClearScreen,
+		m.blinkCmd(),
+	)
 }
 
 func (m Model) buildDeleteStatement() string {
@@ -145,7 +151,7 @@ func (m Model) executeDelete(sql string) error {
 }
 
 func validateDeleteStatement(sql string) error {
-	var result strings. Builder
+	var result strings.Builder
 	for line := range strings.SplitSeq(sql, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "--") && trimmed != "" {

@@ -7,11 +7,17 @@ import (
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return m.handleKeyPress(msg)
+		return m. handleKeyPress(msg)
 	case blinkMsg:
 		m.blinkCopiedCell = false
 		m.blinkUpdatedCell = false
-		m.blinkDeletedRow = false
+		m. blinkDeletedRow = false
+	case editorCompleteMsg: 
+		return m.handleEditorComplete(msg)
+	case deleteCompleteMsg:
+		return m.handleDeleteComplete(msg)
+	case queryEditCompleteMsg: 
+		return m.handleQueryEditComplete(msg)
 	case tea.WindowSizeMsg:
 		return m.handleWindowResize(msg), nil
 	}
@@ -19,14 +25,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea. Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 
 	case "up", "k":
 		return m.moveUp(), nil
-	case "down", "j":
+	case "down", "j": 
 		return m.moveDown(), nil
 	case "left", "h":
 		return m.moveLeft(), nil
@@ -35,16 +41,16 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "home", "0", "_":
 		return m.jumpToFirstCol(), nil
-	case "end", "$":
+	case "end", "$": 
 		return m.jumpToLastCol(), nil
-	case "g":
+	case "g":  
 		return m.jumpToFirstRow(), nil
 	case "G":
 		return m.jumpToLastRow(), nil
 
 	case "pgup", "ctrl+u":
 		return m.pageUp(), nil
-	case "pgdown", "ctrl+d":
+	case "pgdown", "ctrl+d": 
 		return m.pageDown(), nil
 
 	case "v":
@@ -61,13 +67,12 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.editAndRerunQuery()
 	}
 
-
 	return m, nil
 }
 
 func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
-	m.height = msg.Height
+	m. height = msg.Height
 
 	m.visibleCols = (m.width - 2) / (cellWidth + 1)
 	if m.visibleCols > m.numCols() {
@@ -77,7 +82,7 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	// Offset so table doesn't take full terminal height
 	m.visibleRows = m.height - 9
 	if m.visibleRows > m.numRows() {
-		m.visibleRows = m.numRows()
+		m.visibleRows = m. numRows()
 	}
 	if m.visibleRows < 1 {
 		m.visibleRows = 1

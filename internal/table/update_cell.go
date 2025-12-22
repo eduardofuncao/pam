@@ -12,15 +12,12 @@ import (
 )
 
 func (m Model) updateCell() (tea.Model, tea.Cmd) {
-	if m.selectedRow < 0 || m. selectedRow >= m.numRows() {
+	if m.selectedRow < 0 || m.selectedRow >= m.numRows() {
 		return m, nil
 	}
-	if m.selectedCol < 0 || m. selectedCol >= m.numCols() {
+	if m.selectedCol < 0 || m.selectedCol >= m.numCols() {
 		return m, nil
 	}
-
-	// Capture the old value
-	// oldValue := m.data[m.selectedRow][m.selectedCol]
 
 	updateStmt := m.buildUpdateStatement()
 
@@ -31,54 +28,66 @@ func (m Model) updateCell() (tea.Model, tea.Cmd) {
 
 	tmpFile, err := os.CreateTemp("", "pam-update-*.sql")
 	if err != nil {
-		fmt. Fprintf(os.Stderr, "Error creating temp file: %v\n", err)
-		return m, tea.Quit
+		return m, nil
 	}
-	tmpPath := tmpFile. Name()
-	defer os.Remove(tmpPath)
+	tmpPath := tmpFile.Name()
 
 	if _, err := tmpFile.Write([]byte(updateStmt)); err != nil {
-		tmpFile.Close()
-		fmt.Fprintf(os.Stderr, "Error writing temp file: %v\n", err)
-		return m, tea.Quit
+		tmpFile. Close()
+		os.Remove(tmpPath)
+		return m, nil
 	}
 	tmpFile.Close()
 
-	tea.ExitAltScreen()
-
+	// Use tea.ExecProcess to run the editor
 	cmd := exec.Command(editorCmd, tmpPath)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd. Stderr = os.Stderr
 	
-	if err := cmd. Run(); err != nil {
-		fmt.Fprintf(os. Stderr, "Error running editor: %v\n", err)
-		tea.EnterAltScreen()
-		return m, tea.Quit
-	}
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		// Read the edited file BEFORE removing it
+		editedSQL, readErr := os.ReadFile(tmpPath)
+		
+		// Now remove the temp file
+		os. Remove(tmpPath)
+		
+		if err != nil || readErr != nil {
+			return nil
+		}
 
-	editedSQL, err := os.ReadFile(tmpPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading edited file: %v\n", err)
-		tea.EnterAltScreen()
-		return m, tea.Quit
-	}
+		return editorCompleteMsg{
+			sql:       string(editedSQL),
+			colIndex:  m.selectedCol,
+		}
+	})
+}
 
-	newValue := extractNewValue(string(editedSQL), m.columns[m.selectedCol])
+// Message sent when editor completes
+type editorCompleteMsg struct {
+	sql      string
+	colIndex int
+}
 
-	tea.EnterAltScreen()
+// Handle the editor complete message in Update()
+func (m Model) handleEditorComplete(msg editorCompleteMsg) (tea.Model, tea.Cmd) {
+	newValue := m.extractNewValue(msg.sql, m.columns[msg.colIndex])
 
-	if err := m.executeUpdate(string(editedSQL)); err != nil {
+	// Execute the update
+	if err := m.executeUpdate(msg.sql); err != nil {
+		// Just return without updating on error
 		return m, nil
 	}
 	
-	m.data[m.selectedRow][m.selectedCol] = newValue
+	// Successfully updated - update the model data in-place
+	m.data[m.selectedRow][msg.colIndex] = newValue
 	
 	m.blinkUpdatedCell = true
 	m.updatedRow = m.selectedRow
-	m.updatedCol = m.selectedCol
+	m.updatedCol = msg. colIndex
 	
-	return m, m.blinkCmd()
+	// Force a full re-render with screen clear
+	return m, tea. Batch(
+		tea.ClearScreen,
+		m.blinkCmd(),
+	)
 }
 
 func (m Model) blinkCmd() tea.Cmd {
@@ -89,13 +98,13 @@ func (m Model) blinkCmd() tea.Cmd {
 
 func (m Model) buildUpdateStatement() string {
 	columnName := m.columns[m.selectedCol]
-	currentValue := m. data[m.selectedRow][m.selectedCol]
+	currentValue := m.data[m. selectedRow][m.selectedCol]
 	
 	pkValue := ""
-	if m.primaryKeyCol != "" {
-		for i, col := range m.columns {
+	if m. primaryKeyCol != "" {
+		for i, col := range m. columns {
 			if col == m.primaryKeyCol {
-				pkValue = m.data[m.selectedRow][i]
+				pkValue = m.data[m. selectedRow][i]
 				break
 			}
 		}
@@ -112,28 +121,6 @@ func (m Model) buildUpdateStatement() string {
 
 func (m Model) executeUpdate(sql string) error {
 	var result strings.Builder
-	for line := range strings. SplitSeq(sql, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "--") && trimmed != "" {
-			result.WriteString(trimmed)
-			result.WriteString(" ")
-		}
-	}
-	
-	cleanSQL := strings.TrimSpace(result.String())
-	cleanSQL = strings.TrimSuffix(cleanSQL, ";")
-	
-	if cleanSQL == "" {
-		return fmt. Errorf("no SQL to execute")
-	}
-	
-	return m.dbConnection.Exec(cleanSQL)
-}
-
-// extractNewValue parses the SQL UPDATE statement to extract the new value
-func extractNewValue(sql string, columnName string) string {
-	// Remove comments and consolidate to single line
-	var result strings.Builder
 	for line := range strings.SplitSeq(sql, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "--") && trimmed != "" {
@@ -141,14 +128,36 @@ func extractNewValue(sql string, columnName string) string {
 			result.WriteString(" ")
 		}
 	}
-	cleanSQL := strings.TrimSpace(result. String())
 	
-	// Try to match: SET column_name = 'value' or SET column_name = value
+	cleanSQL := strings. TrimSpace(result.String())
+	cleanSQL = strings.TrimSuffix(cleanSQL, ";")
+	
+	if cleanSQL == "" {
+		return fmt.Errorf("no SQL to execute")
+	}
+	
+	return m.dbConnection.Exec(cleanSQL)
+}
+
+// extractNewValue parses the SQL UPDATE statement to extract the new value
+func (m Model) extractNewValue(sql string, columnName string) string {
+	// Remove comments and consolidate to single line
+	var result strings.Builder
+	for line := range strings.SplitSeq(sql, "\n") {
+		trimmed := strings. TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "--") && trimmed != "" {
+			result.WriteString(trimmed)
+			result.WriteString(" ")
+		}
+	}
+	cleanSQL := strings.TrimSpace(result.String())
+	
+	// Try to match:   SET column_name = 'value' or SET column_name = value
 	// This regex handles both quoted and unquoted values
 	pattern := fmt.Sprintf(`SET\s+%s\s*=\s*('([^']*)'|"([^"]*)"|([^,\s;]+))`, regexp.QuoteMeta(columnName))
 	re := regexp.MustCompile(`(?i)` + pattern)
 	
-	matches := re. FindStringSubmatch(cleanSQL)
+	matches := re.FindStringSubmatch(cleanSQL)
 	if len(matches) > 0 {
 		// matches[2] = single quoted value
 		// matches[3] = double quoted value
