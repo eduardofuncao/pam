@@ -26,7 +26,7 @@ func (m Model) deleteRow() (tea.Model, tea.Cmd) {
 		editorCmd = "vim"
 	}
 
-	tmpFile, err := os.CreateTemp("", "pam-delete-*. sql")
+	tmpFile, err := os.CreateTemp("", "pam-delete-*.sql")
 	if err != nil {
 		return m, nil
 	}
@@ -80,10 +80,13 @@ type deleteCompleteMsg struct {
 // Handle the delete complete message
 func (m Model) handleDeleteComplete(msg deleteCompleteMsg) (tea.Model, tea.Cmd) {
 	// Validate the delete statement
-	if err := validateDeleteStatement(msg. sql); err != nil {
+	if err := validateDeleteStatement(msg.sql); err != nil {
 		// Validation failed (empty SQL, no WHERE clause, etc.) - just return to table
 		return m, nil
 	}
+
+	// Store the cleaned SQL for display - ADD THIS LINE
+	m.lastExecutedQuery = m.cleanSQLForDisplay(msg.sql)
 
 	// Execute the delete
 	if err := m.executeDelete(msg.sql); err != nil {
@@ -93,20 +96,18 @@ func (m Model) handleDeleteComplete(msg deleteCompleteMsg) (tea.Model, tea.Cmd) 
 
 	// Successfully deleted - update the model data
 	m.data = append(m.data[:msg.rowIndex], m.data[msg.rowIndex+1:]...)
-
 	if m.selectedRow >= m.numRows() && m.numRows() > 0 {
 		m.selectedRow = m.numRows() - 1
 	}
-
 	if m.offsetY >= m.numRows() && m.numRows() > 0 {
 		m.offsetY = m.numRows() - 1
 	}
 
-	m. blinkDeletedRow = true
+	m.blinkDeletedRow = true
 	m.deletedRow = m.selectedRow
 
 	// Force a full re-render with screen clear
-	return m, tea. Batch(
+	return m, tea.Batch(
 		tea.ClearScreen,
 		m.blinkCmd(),
 	)

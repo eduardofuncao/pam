@@ -54,7 +54,7 @@ func (a *App) handleQuery() {
 	}
 
 	// Display query info
-	a.displayQueryInfo(query)
+	// a.displayQueryInfo(query)
 
 	// Execute query
 	a.executeQuery(query, currConn, isInlineSQL)

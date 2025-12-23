@@ -37,6 +37,7 @@ type Model struct {
 	currentQuery     db.Query
 	shouldRerunQuery bool
 	editedQuery      string
+	lastExecutedQuery string
 }
 
 type blinkMsg struct{}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/eduardofuncao/pam/internal/editor"
 	"github.com/eduardofuncao/pam/internal/styles"
 )
 
@@ -14,6 +15,40 @@ func (m Model) View() string {
 	}
 
 	var b strings.Builder
+
+	// Display query name header
+	b.WriteString(styles.Title.Render("\n◆ " + m.currentQuery.Name))
+	b.WriteString("\n")
+	
+	// Show the last executed query (for updates) or the current query (for selects)
+	var queryToDisplay string
+	if m.lastExecutedQuery != "" {
+		queryToDisplay = m.lastExecutedQuery
+	} else {
+		queryToDisplay = m.currentQuery.SQL
+	}
+	
+	// Import the editor package at the top of your view.go file:
+	// "github.com/eduardofuncao/pam/internal/editor"
+	
+	// Format and highlight the SQL
+	formattedSQL := editor.FormatSQLWithLineBreaks(queryToDisplay)
+	highlightedSQL := editor.HighlightSQL(formattedSQL)
+	b.WriteString(highlightedSQL)
+	b.WriteString("\n")
+	
+	// Add separator line
+	separatorWidth := 0
+	endCol := min(m.offsetX+m.visibleCols, m.numCols())
+	for j := m.offsetX; j < endCol; j++ {
+		separatorWidth += cellWidth
+		if j < endCol-1 {
+			separatorWidth += 1 // For the │ separator between cells
+		}
+	}
+
+	b.WriteString(styles.Separator.Render(strings.Repeat("─", separatorWidth)))
+	b.WriteString("\n")
 
 	b.WriteString(m.renderHeader())
 	b.WriteString("\n")
