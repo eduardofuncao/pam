@@ -246,7 +246,7 @@ func (a *App) executeNonSelectQuery(query db.Query, currConn db. DatabaseConnect
 	}
 
 	// Show success message
-	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Command executed successfully in %. 2fs", elapsed.Seconds())))
+fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Command executed successfully in %.2fs", elapsed.Seconds())))
 
 	// For saved queries, show the SQL that was executed
 	if ! isInlineSQL {

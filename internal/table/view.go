@@ -145,7 +145,7 @@ func (m Model) renderFooter() string {
 		styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
 		styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
 		styles.Faint. Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
-		updateInfo, del, yank, edit, sel, quit, hjkl)
+		updateInfo, del, yank, sel, edit, quit, hjkl)
 	
 	
 	return footer
