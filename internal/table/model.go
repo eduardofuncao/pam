@@ -46,8 +46,19 @@ func New(columns []string, data [][]string, elapsed time.Duration, conn db. Data
 	columnTypes := make([]string, len(columns))
 	if tableName != "" && conn != nil {
 		metadata, err := conn.GetTableMetadata(tableName)
-		if err == nil && len(metadata. ColumnTypes) == len(columns) {
-			columnTypes = metadata.ColumnTypes
+
+		if err == nil && metadata != nil {
+				colTypeMap := map[string]string{}
+				for i, colName := range metadata.Columns {
+						if i < len(metadata.ColumnTypes) {
+								colTypeMap[colName] = metadata.ColumnTypes[i]
+						}
+				}
+				for i, col := range columns {
+						if t, ok := colTypeMap[col]; ok {
+								columnTypes[i] = t
+						}
+				}
 		}
 	}
 	

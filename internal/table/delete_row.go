@@ -77,21 +77,18 @@ type deleteCompleteMsg struct {
 	rowIndex int
 }
 
-// Handle the delete complete message
 func (m Model) handleDeleteComplete(msg deleteCompleteMsg) (tea.Model, tea.Cmd) {
 	// Validate the delete statement
 	if err := validateDeleteStatement(msg.sql); err != nil {
-		// Validation failed (empty SQL, no WHERE clause, etc.) - just return to table
-		return m, nil
+		printError("Delete validation failed: %v", err)
 	}
 
-	// Store the cleaned SQL for display - ADD THIS LINE
+	// Store the cleaned SQL for display
 	m.lastExecutedQuery = m.cleanSQLForDisplay(msg.sql)
 
 	// Execute the delete
 	if err := m.executeDelete(msg.sql); err != nil {
-		// Execution failed - just return without deleting
-		return m, nil
+		printError("Could not execute delete: %v", err)
 	}
 
 	// Successfully deleted - update the model data

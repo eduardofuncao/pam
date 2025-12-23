@@ -67,13 +67,12 @@ type editorCompleteMsg struct {
 func (m Model) handleEditorComplete(msg editorCompleteMsg) (tea.Model, tea.Cmd) {
 	newValue := m.extractNewValue(msg.sql, m.columns[msg.colIndex])
 
-	// Store the cleaned SQL for display - ADD THIS LINE
+	// Store the cleaned SQL for display
 	m.lastExecutedQuery = m.cleanSQLForDisplay(msg.sql)
 
 	// Execute the update
 	if err := m.executeUpdate(msg.sql); err != nil {
-		// Just return without updating on error
-		return m, nil
+		printError("Could not execute update: %v", err)
 	}
 
 	// Successfully updated - update the model data in-place
