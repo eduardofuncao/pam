@@ -17,7 +17,7 @@
 **Written in Go, powered by CharmBracelet's Bubblegum**
 
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Database Support](#-database-support) • [Commands](#-commands) • [TUI Navigation](#-tui-table-navigation) • [Roadmap](#-roadmap)
+[Quick Start](#-quick-start) • [Database Support](#%EF%B8%8F-database-support) • [Features](#-features) • [Commands](#-all-commands) • [TUI Navigation](#%EF%B8%8F-tui-table-navigation) • [Roadmap](#%EF%B8%8F-roadmap)
 
 </div>
 
@@ -280,7 +280,7 @@ ADD GIF HERE
 ---
 ## 🗺️ Roadmap
 
-### v0.1 Launch
+### v0.1 Kelly
 - [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle)
 - [x] Query library with save/remove functionality
 - [x] Interactive TUI with Vim navigation
@@ -292,14 +292,14 @@ ADD GIF HERE
 - [x] Column type indicators
 - [ ] SQL Server driver support
 
-### v0.2 - Core Improvements
+### v0.2 - Jim
 - [ ] Row limit configuration option
 - [ ] Query parameter/placeholder support (e.g., `WHERE id = $1`)
 - [ ] Query execution history with persistence
 - [ ] CSV/JSON export for multiple cells
 - [ ] Database schema handling
 
-### v0.3 - Power Features
+### v0.3 - Dwight
 - [ ] Shell autocomplete (bash, fish, zsh)
 - [ ] Search/filter within table view
 - [ ] `pam info table <table>` - Show table metadata (columns, types, constraints)
