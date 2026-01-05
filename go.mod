@@ -1,7 +1,5 @@
 module github.com/eduardofuncao/pam
 
-replace github.com/eduardofuncao/pam => ./
-
 go 1.25.0
 
 require (
