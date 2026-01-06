@@ -28,6 +28,15 @@ func (oc *OracleConnection) Open() error {
 		return err
 	}
 	oc.db = db
+	
+	if oc.Schema != "" {
+		alterSessionSQL := fmt.Sprintf("ALTER SESSION SET CURRENT_SCHEMA = %s", oc.Schema)
+		_, err = oc.db. Exec(alterSessionSQL)
+		if err != nil {
+			oc.db.Close()
+			return fmt.Errorf("failed to set schema to '%s': %w", oc.Schema, err)
+		}
+	}
 	return nil
 }
 
@@ -69,13 +78,17 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 	
 	upperTableName := strings.ToUpper(tableName)
 	
-	// First, get the current schema/owner
+	// Get the current schema (respects ALTER SESSION SET CURRENT_SCHEMA)
 	var currentOwner string
-	ownerQuery := `SELECT USER FROM DUAL`
+	ownerQuery := `SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') FROM DUAL`
 	row := oc.db.QueryRow(ownerQuery)
 	if err := row.Scan(&currentOwner); err != nil {
-		// If we can't get the owner, we'll try without it
-		currentOwner = ""
+		// If we can't get the owner, fall back to the BaseConnection. Schema if set
+		if oc.Schema != "" {
+			currentOwner = strings.ToUpper(oc. Schema)
+		} else {
+			currentOwner = ""
+		}
 	}
 	
 	// Primary key query
@@ -85,7 +98,7 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 		JOIN all_cons_columns cols ON cons.constraint_name = cols.constraint_name
 			AND cons.owner = cols.owner
 		WHERE cons.constraint_type = 'P'
-		AND cons. table_name = :1
+		AND cons.table_name = : 1
 		AND ROWNUM = 1
 		ORDER BY cols.position
 	`
@@ -106,7 +119,7 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 	}
 	
 	metadata := &TableMetadata{
-		TableName: tableName,
+		TableName:  tableName,
 	}
 	
 	// Execute PK query
@@ -134,7 +147,7 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 	colQuery := `
 		SELECT column_name, data_type, data_length, data_precision, data_scale
 		FROM all_tab_columns
-		WHERE table_name = :1
+		WHERE table_name = : 1
 		ORDER BY column_id
 	`
 	

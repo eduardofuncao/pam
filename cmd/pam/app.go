@@ -53,8 +53,8 @@ func (a *App) Run() {
 
 func (a *App) printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("pam init <name> <db-type> <connection-string>")
-	fmt.Println("pam switch <db-name>")
+	fmt.Println("pam init <name> <db-type> <connection-string> [schema]")
+	fmt. Println("pam switch <db-name>")
 	fmt.Println("pam add <query-name> <query>")
 	fmt.Println("pam run <query-name> [--edit]")
 }

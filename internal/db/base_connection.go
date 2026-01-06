@@ -11,6 +11,7 @@ type BaseConnection struct {
 	Name       string
 	DbType     string
 	ConnString string
+	Schema     string
 	Queries    map[string]Query
 	LastQuery  Query
 }
@@ -67,3 +68,5 @@ func (b *BaseConnection) GetLastQuery() Query                 { return b.LastQue
 func (b *BaseConnection) SetLastQuery(query Query)            { b.LastQuery = query }
 func (b *BaseConnection) GetQueries() map[string]Query        { return b.Queries }
 func (b *BaseConnection) SetQueries(queries map[string]Query) { b.Queries = queries }
+func (b *BaseConnection) GetSchema() string        { return b.Schema }
+func (b *BaseConnection) SetSchema(schema string)  { b.Schema = schema }

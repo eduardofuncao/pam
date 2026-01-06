@@ -73,15 +73,16 @@ func (a *App) PrintCommandHelp() {
 
 	switch cmd {
 	case "init", "create":
-		section("Command: init")
-		fmt.Println(styles.Faint.Render("Create and validate a new database connection configuration."))
+		section("Command:  init")
+		fmt.Println(styles.Faint.Render("Create and validate a new database connection configuration. "))
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  pam init <name> <db-type> <connection-string>")
+		fmt.Println("  pam init <name> <db-type> <connection-string> [schema]")
 		fmt.Println()
 		section("Description")
 		fmt.Println("  - Opens and pings the database to verify the connection.")
 		fmt.Println("  - Saves the configuration if everything succeeds.")
+		fmt.Println("  - For Oracle databases, optionally specify a schema to set as default.")
 		fmt.Println()
 		section("Examples")
 		fmt.Println("  pam init dev postgres \"postgres://user:pass@localhost:5432/dbname\"")
@@ -158,7 +159,7 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  y / Enter             " + styles.Faint.Render("Copy current cell value to clipboard (if supported)"))
 		fmt.Println("  v                     " + styles.Faint.Render("Start multi-selection mode"))
 		fmt.Println("  u                     " + styles.Faint.Render("Update selected cell"))
-		fmt.Println("  d                     " + styles. Faint.Render("Delete current row (requires WHERE clause)"))
+		fmt.Println("  d                     " + styles.Faint.Render("Delete current row (requires WHERE clause)"))
 		fmt.Println("  Esc /Ctrl+c           " + styles.Faint.Render("Quit the table view"))
 		fmt.Println()
 		fmt.Println(styles.Faint.Render("Exact keys may vary depending on how the table component is wired,"))

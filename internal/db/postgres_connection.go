@@ -28,6 +28,16 @@ func (p *PostgresConnection) Open() error {
 		return err
 	}
 	p.db = db
+	
+	if p.Schema != "" {
+		setSchemaSQL := fmt.Sprintf("SET search_path TO %s", p.Schema)
+		_, err = p.db.Exec(setSchemaSQL)
+		if err != nil {
+			p.db.Close()
+			return fmt.Errorf("failed to set schema to '%s': %w", p.Schema, err)
+		}
+	}
+	
 	return nil
 }
 
@@ -67,24 +77,39 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 		return nil, fmt.Errorf("database is not open")
 	}
 	
+	var currentSchema string
+	schemaQuery := `SELECT current_schema()`
+	row := p.db.QueryRow(schemaQuery)
+	if err := row.Scan(&currentSchema); err != nil {
+		// Fallback to configured schema or 'public'
+		if p.Schema != "" {
+			currentSchema = p.Schema
+		} else {
+			currentSchema = "public"
+		}
+	}
+	
 	pkQuery := `
 		SELECT a.attname
 		FROM pg_index i
 		JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-		WHERE i.indrelid = $1:: regclass
+		JOIN pg_class c ON c. oid = i.indrelid
+		JOIN pg_namespace n ON n. oid = c.relnamespace
+		WHERE c.relname = $1
+		AND n.nspname = $2
 		AND i.indisprimary
 		ORDER BY a.attnum
 		LIMIT 1
 	`
 	
-	rows, err := p.db.Query(pkQuery, tableName)
+	rows, err := p.db.Query(pkQuery, tableName, currentSchema)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query postgres primary key: %w", err)
+		return nil, fmt. Errorf("failed to query postgres primary key: %w", err)
 	}
 	defer rows.Close()
 	
 	metadata := &TableMetadata{
-		TableName:  tableName,
+		TableName: tableName,
 	}
 	
 	if rows.Next() {
@@ -105,17 +130,18 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 		       END as full_type
 		FROM information_schema.columns
 		WHERE table_name = $1
+		AND table_schema = $2
 		ORDER BY ordinal_position
 	`
 	
-	colRows, err := p.db.Query(colQuery, tableName)
+	colRows, err := p.db. Query(colQuery, tableName, currentSchema)
 	if err == nil {
 		defer colRows. Close()
 		for colRows.Next() {
 			var colName, colType string
 			if err := colRows.Scan(&colName, &colType); err == nil {
-				metadata. Columns = append(metadata.Columns, colName)
-				metadata.ColumnTypes = append(metadata. ColumnTypes, colType)
+				metadata.Columns = append(metadata.Columns, colName)
+				metadata.ColumnTypes = append(metadata.ColumnTypes, colType)
 			}
 		}
 	}
