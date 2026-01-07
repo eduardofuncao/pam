@@ -108,45 +108,61 @@ func (m Model) renderFooter() string {
 	columnType := ""
 	
 	if m.selectedRow >= 0 && m.selectedRow < len(m.data) &&
-	   m.selectedCol >= 0 && m.selectedCol < len(m.data[m. selectedRow]) {
-		currentCellValue = m.data[m.selectedRow][m.selectedCol]
+	   m.selectedCol >= 0 && m.selectedCol < len(m.data[m.selectedRow]) {
+		currentCellValue = m.data[m.selectedRow][m. selectedCol]
 	}
 	
-	if m.selectedCol >= 0 && m.selectedCol < len(m.columnTypes) {
+	if m. selectedCol >= 0 && m.selectedCol < len(m.columnTypes) {
 		columnType = m.columnTypes[m.selectedCol]
 	}
 	
-	maxPreviewWidth := m. width - len(columnType) - 10
+	maxPreviewWidth := m.width - len(columnType) - 10
 	displayValue := currentCellValue
 	if len(displayValue) > maxPreviewWidth && maxPreviewWidth > 0 {
 		displayValue = displayValue[: maxPreviewWidth-3] + "..."
 	}
 	
-	cellPreview := fmt. Sprintf("%s %s\n",
+	cellPreview := fmt.Sprintf("%s %s\n",
 		styles.Faint. Render(columnType),
 		styles.TableCell.Render(displayValue))
 	
 	updateInfo := ""
+	delInfo := ""
+	
 	if m.tableName != "" && m.primaryKeyCol != "" {
-		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate")
+		updateInfo = styles.TableHeader.Render("u") + styles. Faint.Render("pdate")
+		delInfo = styles.TableHeader. Render("D") + styles.Faint.Render("el")
 	} else if m.tableName != "" {
-		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate (no PK)")
+		updateInfo = styles.TableHeader. Render("u") + styles.Faint.Render("pdate (no PK)")
+		delInfo = ""
+	} else {
+		// No table name means JOIN or complex query
+		updateInfo = styles. Faint.Render("(update/delete disabled)")
+		delInfo = ""
 	}
 
-	sel := styles.TableHeader. Render("v") + styles.Faint.Render("sel")
-	del := styles.TableHeader.Render("D") + styles.Faint.Render("el")
+	sel := styles.TableHeader.Render("v") + styles.Faint.Render("sel")
 	edit := styles.TableHeader.Render("e") + styles.Faint.Render("ditSQL")
 	yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
 	quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
-	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
+	hjkl := styles.TableHeader. Render("hjkl") + styles.Faint. Render("←↓↑→")
 
-	footer := fmt.Sprintf("\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
-		cellPreview,
-		styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
-		styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-		styles.Faint. Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
-		updateInfo, del, yank, sel, edit, quit, hjkl)
-	
+	var footer string
+	if delInfo != "" {
+		footer = fmt.Sprintf("\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+			cellPreview,
+			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
+			styles. Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed. Seconds())),
+			styles.Faint.Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
+			updateInfo, delInfo, yank, sel, edit, quit, hjkl)
+	} else {
+		footer = fmt.Sprintf("\n%s%s %s | %s | %s  %s  %s  %s  %s  %s",
+			cellPreview,
+			styles.Faint.Render(fmt. Sprintf("%dx%d", m. numRows(), m.numCols())),
+			styles.Faint.Render(fmt. Sprintf("In %.2fs", m.elapsed.Seconds())),
+			styles.Faint. Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
+			updateInfo, yank, sel, edit, quit, hjkl)
+	}
 	
 	return footer
 }
