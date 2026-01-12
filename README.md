@@ -108,6 +108,8 @@ pam init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmo
 
 ```bash
 pam init mysql-dev mysql 'myuser:mypassword@tcp(127.0.0.1:3306)/mydb'
+
+pam init mariadb-docker mariadb "root:MyStrongPass123@tcp(localhost:3306)/dundermifflin"
 ```
 
 ### SQL Server
@@ -123,11 +125,25 @@ pam init sqlserver-docker sqlserver "sqlserver://sa:MyStrongPass123@localhost:14
 pam init sqlite-local sqlite file:/home/eduardo/code/dbeesly/sqlite/mydb.sqlite
 ```
 
+### DuckDB
+
+```bash
+pam init duckdb-local duckdb /home/user/code/dbeesly/duckdb/data/dundermifflin.duckdb
+```
+
+
 ### Oracle
 
 ```bash
 pam init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1
 ```
+
+### ClickHouse
+
+```bash
+pam init clickhouse-docker clickhouse "clickhouse://myuser:mypassword@localhost:9000/dundermifflin"
+```
+
 
 ---
 
@@ -283,7 +299,7 @@ ADD GIF HERE
 ## 🗺️ Roadmap
 
 ### v0.1 Kelly
-- [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle, SQL Server)
+- [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle, SQL Server, DuckDB, ClickHouse)
 - [x] Query library with save/edit/remove functionality
 - [x] Interactive TUI with Vim navigation
 - [x] In-place cell updates and row deletion
@@ -292,10 +308,9 @@ ADD GIF HERE
 - [x] Query editing in external editor
 - [x] Primary key detection
 - [x] Column type indicators
-- [x] SQL Server driver support
-- [x] Row limiting configuration option
 
 ### v0.2 - Jim
+- [ ] Row limit configuration option
 - [ ] Query parameter/placeholder support (e.g., `WHERE id = $1`)
 - [ ] Query execution history with persistence
 - [ ] CSV/JSON export for multiple cells
@@ -332,6 +347,6 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 **Made with ❤️ by [@eduardofuncao](https://github.com/eduardofuncao)**
 
-> *"I don't think it would be the worst thing if they didn't work out...  Wait, can I say that?"* - Pam Beesly (definitely NOT about Pam's Database Drawer)
+> *"I don't think it would be the worst thing if it didn't work out...  Wait, can I say that?"* - Pam Beesly (definitely NOT about Pam's Database Drawer)
 
 </div>
