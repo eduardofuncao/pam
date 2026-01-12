@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -63,15 +64,18 @@ func (b *BaseConnection) BuildUpdateStatement(tableName, columnName, currentValu
 
 func (b *BaseConnection) ApplyRowLimit(sql string, limit int) string {
 	trimmedSQL := strings.ToUpper(strings.TrimSpace(sql))
-	if ! strings.HasPrefix(trimmedSQL, "SELECT") && !strings.HasPrefix(trimmedSQL, "WITH") {
+	if !strings.HasPrefix(trimmedSQL, "SELECT") && !strings.HasPrefix(trimmedSQL, "WITH") {
 		return sql
 	}
-	
-	if strings.Contains(strings.ToUpper(sql), " LIMIT ") {
+
+	cleanSQL := strings.TrimRight(strings.TrimSpace(sql), ";")
+
+	limitPattern := regexp.MustCompile(`(?i)\bLIMIT\s+\d+\s*(?:OFFSET\s+\d+)?$`)
+	if limitPattern.MatchString(cleanSQL) {
 		return sql
 	}
-	
-	return fmt.Sprintf("%s\nLIMIT %d", strings.TrimRight(sql, ";"), limit)
+
+	return fmt.Sprintf("%s\nLIMIT %d", cleanSQL, limit)
 }
 
 func (b *BaseConnection) GetName() string                     { return b.Name }

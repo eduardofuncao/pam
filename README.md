@@ -192,7 +192,7 @@ pam run 2
 
 ### Interactive Editing
 
-Open queries in your favorite editor before execution.
+Open queries in your favorite $EDITOR before execution.
 
 ```bash
 # Edit existing query before running
@@ -333,6 +333,7 @@ ADD GIF HERE
 - [x] Column type indicators
 
 ### v0.2 - Jim
+- [ ] Dynamic column width
 - [ ] Row limit configuration option
 - [ ] Program colors configuration option
 - [ ] Query parameter/placeholder support (e.g., `WHERE id = $1`)

@@ -37,7 +37,7 @@ func (a *App) handleAdd() {
 			editorCmd = "vim"
 		}
 
-		tmpFile, err := os.CreateTemp("", "pam-new-query-*.  sql")
+		tmpFile, err := os.CreateTemp("", "pam-new-query-*.sql")
 		if err != nil {
 			printError("Failed to create temp file: %v", err)
 		}
