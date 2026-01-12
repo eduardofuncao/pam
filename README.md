@@ -20,7 +20,7 @@
 **A minimal, pretty fast CLI tool for managing and executing SQL queries across multiple databases. Written in Go, made beautify with CharmBracelet's BubbleTea**
 
 
-[Quick Start](#-quick-start) • [Database Support](#%EF%B8%8F-database-support) • [Features](#-features) • [Commands](#-all-commands) • [TUI Navigation](#%EF%B8%8F-tui-table-navigation) • [Roadmap](#%EF%B8%8F-roadmap)
+[Quick Start](#-quick-start) • [Configuration](#%EF%B8%8F-configuration) • [Database Support](#%EF%B8%8F-database-support) • [SQL Dialects](#%EF%B8%8F-sql-dialect-differences) • [Features](#-features) • [Commands](#-all-commands) • [TUI Navigation](#%EF%B8%8F-tui-table-navigation) • [Troubleshooting](#%EF%B8%8F-troubleshooting) • [Roadmap](#%EF%B8%8F-roadmap) • [Contributing](#-contributing) • [Testing](#-testing)
 
 </div>
 
@@ -35,7 +35,7 @@
 - **Pretty Fast** - Execute queries with minimal overhead
 - **Table view TUI** - Keyboard focused navigation with vim-style bindings
 - **Query Library** - Save and organize your most-used queries
-- **Multi-Database** - Works with PostgreSQL, MySQL, SQLite, Oracle, and SQL Server
+- **Multi-Database** - Works with PostgreSQL, MySQL, SQLite, Oracle, SQL Server, DuckDB, and ClickHouse
 - **In-Place Editing** - Update cells, delete rows and edit your SQL directly from the results table
 - **Smart Copy** - Yank cells or ranges with visual mode
 
@@ -44,6 +44,7 @@
 ## 🚀 Quick Start
 
 ### Installation
+Find the pre-built binaries for your computer's architecture or install it with go:
 
 ```bash
 go install github.com/eduardofuncao/pam/cmd/pam@latest
@@ -54,9 +55,6 @@ go install github.com/eduardofuncao/pam/cmd/pam@latest
 ```bash
 # Create your first connection (PostgreSQL example)
 pam init mydb postgres "postgresql://user:pass@localhost:5432/mydb"
-
-# Or use SQL Server with Docker (see Database Support section below for setup)
-pam init sqlserver-docker sqlserver "sqlserver://sa:MyStrongPass123@localhost:1433/master"
 
 # Add a saved query
 pam add list_users "SELECT * FROM users"
@@ -73,7 +71,7 @@ pam run "SELECT * FROM products WHERE price > 100"
 Once your query results appear, you can navigate and interact with the data: 
 
 ```bash
-# Use vim-style navigation
+# Use vim-style navigation or arrow-keys
 j/k        # Move down/up
 h/l        # Move left/right
 g/G        # Jump to first/last row
@@ -95,6 +93,15 @@ q          # Quit back to terminal
 
 ---
 
+## ⚙️ Configuration
+
+Pam stores its configuration at `~/.config/pam/config.yaml`.
+
+### Row Limit
+All queries are automatically limited to prevent fetching massive result sets. Configure via `default_row_limit` in config or use explicit `LIMIT` in your SQL queries.
+
+---
+
 ## 🗄️ Database Support
 Examples of init/create commands to start working with different database types
 
@@ -102,6 +109,9 @@ Examples of init/create commands to start working with different database types
 
 ```bash
 pam init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable
+
+# or connect to a specific schema:
+pam init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable schema-name
 ```
 
 ### MySQL / MariaDB
@@ -136,6 +146,9 @@ pam init duckdb-local duckdb /home/user/code/dbeesly/duckdb/data/dundermifflin.d
 
 ```bash
 pam init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1
+
+# or connect to a specific schema:
+pam init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1 schema-name
 ```
 
 ### ClickHouse
@@ -226,13 +239,26 @@ ADD GIF HERE
 
 ---
 
+### 📝 Editor Integration
+
+Pam uses your `$EDITOR` environment variable for editing queries and UPDATE/DELETE statements.
+
+```bash
+# Set your preferred editor
+export EDITOR=vim
+export EDITOR=nano
+export EDITOR=code
+```
+
+---
+
 ## 📖 All Commands
 
 ### Connection Management
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `create <name> <type> <conn-string>` | Create new database connection | `pam create mydb postgres "postgresql://..."` |
+| `create <name> <type> <conn-string> [schema]` | Create new database connection | `pam create mydb postgres "postgresql://..."` |
 | `switch <name>` | Switch to a different connection | `pam switch production` |
 | `status` | Show current active connection | `pam status` |
 | `list connections` | List all configured connections | `pam list connections` |
@@ -311,10 +337,12 @@ ADD GIF HERE
 
 ### v0.2 - Jim
 - [ ] Row limit configuration option
+- [ ] Program colors configuration option
 - [ ] Query parameter/placeholder support (e.g., `WHERE id = $1`)
 - [ ] Query execution history with persistence
 - [ ] CSV/JSON export for multiple cells
 - [ ] Database schema handling
+- [ ] Display column types correctly for join queries
 
 ### v0.3 - Dwight
 - [ ] Shell autocomplete (bash, fish, zsh)
@@ -323,6 +351,10 @@ ADD GIF HERE
 - [ ] `pam info connection` - Show connection/database overview
 
 ---
+
+## 🤝 Contributing
+
+We welcome contributions! Get started with detailed instructions from [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🙏 Acknowledgments
 

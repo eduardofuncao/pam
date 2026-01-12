@@ -6,6 +6,7 @@
 !go.sum
 !LICENSE
 !README.md
+!CONTRIBUTING.md
 !shell.nix
 
 !cmd/
