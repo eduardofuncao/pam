@@ -17,12 +17,14 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![go badge](https://img.shields.io/badge/Go-1.21+-00ADD8?%20logo=go&logoColor=white)
 
-**A minimal, pretty fast CLI tool for managing and executing SQL queries across multiple databases. Written in Go, made beautify with CharmBracelet's BubbleTea**
-
+**A minimal CLI tool for managing and executing SQL queries across multiple databases. Written in Go, made beautiful with BubbleTea**
 
 [Quick Start](#-quick-start) • [Configuration](#%EF%B8%8F-configuration) • [Database Support](#%EF%B8%8F-database-support) • [SQL Dialects](#%EF%B8%8F-sql-dialect-differences) • [Features](#-features) • [Commands](#-all-commands) • [TUI Navigation](#%EF%B8%8F-tui-table-navigation) • [Troubleshooting](#%EF%B8%8F-troubleshooting) • [Roadmap](#%EF%B8%8F-roadmap) • [Contributing](#-contributing) • [Testing](#-testing)
 
 </div>
+
+
+> Note: This project is currently in beta. Errors and unexpected behavior may occur
 
 ---
 
@@ -32,19 +34,18 @@
 
 ### Highlights
 
-- **Pretty Fast** - Execute queries with minimal overhead
-- **Table view TUI** - Keyboard focused navigation with vim-style bindings
 - **Query Library** - Save and organize your most-used queries
+- **Runs in the CLI** - Execute queries with minimal overhead
 - **Multi-Database** - Works with PostgreSQL, MySQL, SQLite, Oracle, SQL Server, DuckDB, and ClickHouse
+- **Table view TUI** - Keyboard focused navigation with vim-style bindings
 - **In-Place Editing** - Update cells, delete rows and edit your SQL directly from the results table
-- **Smart Copy** - Yank cells or ranges with visual mode
 
 ---
 
 ## 🚀 Quick Start
 
 ### Installation
-Find the pre-built binaries for your computer's architecture or install it with go:
+Find the pre-built binaries for your computer's architecture in the Releases page or install it with go:
 
 ```bash
 go install github.com/eduardofuncao/pam/cmd/pam@latest
@@ -59,7 +60,10 @@ pam init mydb postgres "postgresql://user:pass@localhost:5432/mydb"
 # Add a saved query
 pam add list_users "SELECT * FROM users"
 
-# Run it - this opens the interactive table viewer
+# List your saved queries containing the word users
+pam list queries users
+
+# Run it, this opens the interactive table viewer
 pam run list_users
 
 # Or run inline SQL
@@ -68,7 +72,7 @@ pam run "SELECT * FROM products WHERE price > 100"
 
 ### Navigating the Table
 
-Once your query results appear, you can navigate and interact with the data: 
+Once your query results appear, you can navigate and interact with the data:
 
 ```bash
 # Use vim-style navigation or arrow-keys
@@ -140,7 +144,6 @@ pam init sqlite-local sqlite file:/home/eduardo/code/dbeesly/sqlite/mydb.sqlite
 ```bash
 pam init duckdb-local duckdb /home/user/code/dbeesly/duckdb/data/dundermifflin.duckdb
 ```
-
 
 ### Oracle
 
@@ -323,6 +326,7 @@ ADD GIF HERE
 
 ---
 ## 🗺️ Roadmap
+> Note: This project is currently in beta. Errors and unexpected behavior may occur
 
 ### v0.1 Kelly
 - [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle, SQL Server, DuckDB, ClickHouse)
