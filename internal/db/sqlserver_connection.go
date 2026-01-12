@@ -91,12 +91,16 @@ func (s *SQLServerConnection) GetTableMetadata(tableName string) (*TableMetadata
 	}
 
 	pkQuery := `
-		SELECT COLUMN_NAME
-		FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-		WHERE TABLE_NAME = @p1
-		  AND CONSTRAINT_NAME = 'PRIMARY'
-		  AND TABLE_SCHEMA = @p2
-		ORDER BY ORDINAL_POSITION
+		SELECT kcu.COLUMN_NAME
+		FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+		JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+			ON kcu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+			AND kcu.TABLE_SCHEMA = tc.TABLE_SCHEMA
+			AND kcu.TABLE_NAME = tc.TABLE_NAME
+		WHERE kcu.TABLE_NAME = @p1
+			AND tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+			AND kcu.TABLE_SCHEMA = @p2
+		ORDER BY kcu.ORDINAL_POSITION
 	`
 
 	rows, err := s.db.Query(pkQuery, tableName, currentSchema)
@@ -150,13 +154,13 @@ func (s *SQLServerConnection) GetTableMetadata(tableName string) (*TableMetadata
 }
 
 func (s *SQLServerConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
-	quotedTableName := fmt.Sprintf("[%s]", tableName)
-	quotedColumnName := fmt.Sprintf("[%s]", columnName)
+	quotedTableName := fmt.Sprintf("%s", tableName)
+	quotedColumnName := fmt.Sprintf("%s", columnName)
 
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 
 	if pkColumn != "" && pkValue != "" {
-		quotedPkColumn := fmt.Sprintf("[%s]", pkColumn)
+		quotedPkColumn := fmt.Sprintf("%s", pkColumn)
 		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
 		return fmt.Sprintf(
 			"-- SQL Server UPDATE statement\nUPDATE %s\nSET %s = '%s'\nWHERE %s = '%s';",
@@ -177,8 +181,8 @@ func (s *SQLServerConnection) BuildUpdateStatement(tableName, columnName, curren
 }
 
 func (s *SQLServerConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkValue string) string {
-	quotedTableName := fmt.Sprintf("[%s]", tableName)
-	quotedPkColumn := fmt.Sprintf("[%s]", primaryKeyCol)
+	quotedTableName := fmt.Sprintf("%s", tableName)
+	quotedPkColumn := fmt.Sprintf("%s", primaryKeyCol)
 	escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
 
 	return fmt.Sprintf(
