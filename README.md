@@ -161,6 +161,7 @@ pam init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1 schema-name
 pam init clickhouse-docker clickhouse "clickhouse://myuser:mypassword@localhost:9000/dundermifflin"
 ```
 
+> To run containerized test database servers for all supported databases, use the sister project [dbeesly](https://github.com/eduardofuncao/dbeesly)
 
 ---
 
@@ -169,8 +170,6 @@ pam init clickhouse-docker clickhouse "clickhouse://myuser:mypassword@localhost:
 ### Query Management
 
 Save, organize, and execute your SQL queries with ease. 
-
-<img width="832" height="627" alt="image" src="https://github.com/user-attachments/assets/0a8e69eb-1dfc-40c5-92c7-cfbdf7e4d538" />
 
 ```bash
 # Add queries with auto-incrementing IDs
@@ -189,6 +188,8 @@ pam list queries employees
 pam run daily_report
 pam run 2
 ```
+
+<img width="832" height="627" alt="image" src="https://github.com/user-attachments/assets/0a8e69eb-1dfc-40c5-92c7-cfbdf7e4d538" />
 
 ### Interactive Editing
 
@@ -315,8 +316,6 @@ When viewing query results in the TUI, you have full Vim-style navigation and ed
 
 Press `v` to enter visual mode, then navigate to select a range of cells.  Press `y` or `Enter` to copy the selection.
 
-ADD GIF HERE
-
 ---
 ## 🗺️ Roadmap
 > Note: This project is currently in beta. Errors and unexpected behavior may occur
@@ -359,7 +358,7 @@ We welcome contributions! Get started with detailed instructions from [CONTRIBUT
 Pam wouldn't exist without the inspiration and groundwork laid by these fantastic projects:
 
 - **[naggie/dstask](https://github.com/naggie/dstask)** - For the elegant CLI/TUI design patterns and file-based configuration approach
-- **[DeprecatedLuar/better-curl-saul](https://github.com/DeprecatedLuar/better-curl-saul)** - For demonstrating a simple and genius approach to making a CLI program
+- **[DeprecatedLuar/better-curl-saul](https://github.com/DeprecatedLuar/better-curl-saul)** - For demonstrating a simple and genius approach to making a CLI tool
 
 Built with: 
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) - The TUI framework
@@ -375,7 +374,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 <div align="center">
 
-**Made with ❤️ by [@eduardofuncao](https://github.com/eduardofuncao)**
+**Made with 👚 by [@eduardofuncao](https://github.com/eduardofuncao)**
 
 > *"I don't think it would be the worst thing if it didn't work out...  Wait, can I say that?"* - Pam Beesly (definitely NOT about Pam's Database Drawer)
 
