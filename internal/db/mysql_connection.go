@@ -118,6 +118,17 @@ func (m *MySQLConnection) GetTableMetadata(tableName string) (*TableMetadata, er
 	return metadata, nil
 }
 
+func (m *MySQLConnection) GetInfoSQL(infoType string) string {
+	switch infoType {
+	case "tables":
+		return "SELECT TABLE_SCHEMA as `schema`,\n		       TABLE_NAME as name\n\t	FROM information_schema.TABLES\n\t\tWHERE TABLE_SCHEMA = DATABASE()\n\t\t  AND TABLE_TYPE = 'BASE TABLE'\n\t\tORDER BY TABLE_SCHEMA, TABLE_NAME"
+	case "views":
+		return "SELECT TABLE_SCHEMA as `schema`,\n		       TABLE_NAME as name\n\t	FROM information_schema.VIEWS\n\t\tWHERE TABLE_SCHEMA = DATABASE()\n\t\tORDER BY TABLE_SCHEMA, TABLE_NAME"
+	default:
+		return ""
+	}
+}
+
 func (m *MySQLConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings. ReplaceAll(currentValue, "'", "''")
 	

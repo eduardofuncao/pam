@@ -149,6 +149,39 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 	return metadata, nil
 }
 
+func (p *PostgresConnection) GetInfoSQL(infoType string) string {
+	schema := p.Schema
+	if schema == "" {
+		schema = "current_schema()"
+	} else {
+		schema = "'" + schema + "'"
+	}
+
+	switch infoType {
+	case "tables":
+		return fmt.Sprintf(`SELECT
+			t.table_schema as schema,
+			t.table_name as name,
+			pg_get_userbyid(c.relowner) as owner
+		FROM information_schema.tables t
+		JOIN pg_class c ON c.relname = t.table_name
+		WHERE t.table_schema = %s
+		  AND t.table_type = 'BASE TABLE'
+		ORDER BY t.table_schema, t.table_name`, schema)
+	case "views":
+		return fmt.Sprintf(`SELECT
+			table_schema as schema,
+			table_name as name,
+			pg_get_userbyid(c.relowner) as owner
+		FROM information_schema.views v
+		JOIN pg_class c ON c.relname = v.table_name
+		WHERE table_schema = %s
+		ORDER BY table_schema, table_name`, schema)
+	default:
+		return ""
+	}
+}
+
 func (p *PostgresConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings. ReplaceAll(currentValue, "'", "''")
 	

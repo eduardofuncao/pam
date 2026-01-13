@@ -143,6 +143,36 @@ func (c *ClickHouseConnection) GetTableMetadata(tableName string) (*TableMetadat
 	return metadata, nil
 }
 
+func (c *ClickHouseConnection) GetInfoSQL(infoType string) string {
+	database := c.Schema
+	if database == "" {
+		database = "currentDatabase()"
+	} else {
+		database = "'" + database + "'"
+	}
+
+	switch infoType {
+	case "tables":
+		return fmt.Sprintf(`SELECT database as schema,
+		       name,
+		       engine as owner
+		FROM system.tables
+		WHERE database = %s
+		  AND engine != 'View'
+		ORDER BY database, name`, database)
+	case "views":
+		return fmt.Sprintf(`SELECT database as schema,
+		       name,
+		       engine as owner
+		FROM system.tables
+		WHERE database = %s
+		  AND engine = 'View'
+		ORDER BY database, name`, database)
+	default:
+		return ""
+	}
+}
+
 func (c *ClickHouseConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 

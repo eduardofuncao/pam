@@ -35,6 +35,7 @@ func (a *App) PrintGeneralHelp() {
 	fmt.Println("  remove      " + styles.Faint.Render("Remove a saved query by name or id (alias: delete)"))
 	fmt.Println("  run         " + styles.Faint.Render("Run a saved query by name or id (alias: query)"))
 	fmt.Println("  list        " + styles.Faint.Render("List connections or queries"))
+	fmt.Println("  info        " + styles.Faint.Render("Show tables or views in current connection"))
 	fmt.Println("  edit        " + styles.Faint.Render("Open config or queries in your editor"))
 	fmt.Println("  status      " + styles.Faint.Render("Show the current active connection"))
 	fmt.Println("  history     " + styles.Faint.Render("Show query history (not implemented yet)"))
@@ -195,7 +196,7 @@ func (a *App) PrintCommandHelp() {
 
 	case "edit":
 		section("Command: edit")
-		fmt.Println(styles.Faint.Render("Open pam’s configuration or queries in your editor."))
+		fmt.Println(styles.Faint.Render("Open pam's configuration or queries in your editor."))
 		fmt.Println()
 		section("Usage")
 		fmt.Println("  pam edit [config | queries]")
@@ -208,6 +209,26 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  pam edit           # defaults to 'config'")
 		fmt.Println("  pam edit config")
 		fmt.Println("  pam edit queries")
+
+	case "info":
+		section("Command: info")
+		fmt.Println(styles.Faint.Render("Show all tables or views in the current database connection."))
+		fmt.Println()
+		section("Usage")
+		fmt.Println("  pam info <tables | views>")
+		fmt.Println()
+		section("Description")
+		fmt.Println("  tables  " + styles.Faint.Render("List all tables in the current connection/schema."))
+		fmt.Println("  views   " + styles.Faint.Render("List all views in the current connection/schema."))
+		fmt.Println()
+		section("Columns displayed")
+		fmt.Println("  - schema (if supported by database)")
+		fmt.Println("  - name")
+		fmt.Println("  - owner (if supported by database)")
+		fmt.Println()
+		section("Examples")
+		fmt.Println("  pam info tables")
+		fmt.Println("  pam info views")
 
 	case "status":
 		section("Command: status")

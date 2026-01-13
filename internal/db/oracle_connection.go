@@ -212,6 +212,33 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 	return metadata, nil
 }
 
+func (oc *OracleConnection) GetInfoSQL(infoType string) string {
+	schema := strings.ToUpper(oc.Schema)
+	if schema == "" {
+		schema = "SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')"
+	} else {
+		schema = "'" + schema + "'"
+	}
+
+	switch infoType {
+	case "tables":
+		return fmt.Sprintf(`SELECT OWNER as schema,
+		       TABLE_NAME as name,
+		       OWNER as owner
+		FROM ALL_TABLES
+		WHERE OWNER = %s`, schema)
+	case "views":
+		return fmt.Sprintf(`SELECT OWNER as schema,
+		       VIEW_NAME as name,
+		       OWNER as owner
+		FROM ALL_VIEWS
+		WHERE OWNER = %s`, schema)
+	default:
+		return ""
+	}
+}
+
+
 func (oc *OracleConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 

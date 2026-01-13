@@ -10,6 +10,7 @@ type DatabaseConnection interface {
 	ExecQuery(sql string, args ...any) (*sql.Rows, error)
 	Exec(sql string, args ...any) error
 	GetTableMetadata(tableName string) (*TableMetadata, error)
+	GetInfoSQL(infoType string) string
 	BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string
 	BuildDeleteStatement(tableName, primaryKeyCol, pkValue string) string
 	ApplyRowLimit(sql string, limit int) string

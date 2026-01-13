@@ -153,6 +153,37 @@ func (s *SQLServerConnection) GetTableMetadata(tableName string) (*TableMetadata
 	return metadata, nil
 }
 
+func (s *SQLServerConnection) GetInfoSQL(infoType string) string {
+	schema := s.Schema
+	if schema == "" {
+		schema = "dbo"
+	}
+	schema = "'" + schema + "'"
+
+	switch infoType {
+	case "tables":
+		return fmt.Sprintf(`SELECT
+			s.NAME as [schema],
+			t.NAME as name,
+			s.NAME as owner
+		FROM sys.tables t
+		INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+		WHERE s.NAME = %s
+		ORDER BY s.NAME, t.NAME`, schema)
+	case "views":
+		return fmt.Sprintf(`SELECT
+			s.NAME as [schema],
+			v.NAME as name,
+			s.NAME as owner
+		FROM sys.views v
+		INNER JOIN sys.schemas s ON v.schema_id = s.schema_id
+		WHERE s.NAME = %s
+		ORDER BY s.NAME, v.NAME`, schema)
+	default:
+		return ""
+	}
+}
+
 func (s *SQLServerConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	quotedTableName := fmt.Sprintf("%s", tableName)
 	quotedColumnName := fmt.Sprintf("%s", columnName)

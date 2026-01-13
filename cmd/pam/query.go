@@ -180,29 +180,49 @@ func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection, isInline 
 	}
 	defer conn.Close()
 
+	if isSelectQuery(query.SQL) {
+		originalQuery := query
+		a.executeSelect(query.SQL, query.Name, conn, &query, isInline, func(editedSQL string) {
+			editedQuery := db.Query{
+				Name: originalQuery.Name,
+				SQL:  editedSQL,
+				Id:    originalQuery.Id,
+			}
+			a.executeQuery(editedQuery, conn, true)
+		})
+	} else {
+		a.executeNonSelect(query, conn, isInline)
+	}
+}
+
+// executeSelect executes SELECT queries and renders results
+// Used by both regular queries (with metadata) and info commands (without metadata)
+func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, query *db.Query, isInline bool, onRerun func(string)) {
 	start := time.Now()
 	done := make(chan struct{})
 	go spinner.Wait(done)
 
-	if isSelectQuery(query.SQL) {
-		a.executeSelect(query, conn, isInline, done, start)
-	} else {
-		a.executeNonSelect(query, conn, isInline, done, start)
-	}
-}
-
-func (a *App) executeSelect(query db.Query, conn db.DatabaseConnection, isInline bool, done chan struct{}, start time.Time) {
-	sqlToExecute := query.SQL
-	if a.config.DefaultRowLimit > 0 {
-		sqlToExecute = conn.ApplyRowLimit(query.SQL, a.config.DefaultRowLimit)
+	// Extract metadata if query provided
+	var tableName, primaryKey string
+	var applyRowLimit bool
+	if query != nil {
+		tableName, primaryKey = a.extractMetadata(conn, *query, isInline)
+		applyRowLimit = true
 	}
 
-	rows, err := conn.ExecQuery(sqlToExecute)
+	// Apply row limit if requested
+	if applyRowLimit && a.config.DefaultRowLimit > 0 {
+		sql = conn.ApplyRowLimit(sql, a.config.DefaultRowLimit)
+	}
+
+	// Execute the query
+	rows, err := conn.ExecQuery(sql)
 	if err != nil {
 		done <- struct{}{}
-		printError("Could not complete query: %v", err)
+		printError("Could not execute query: %v", err)
 	}
 
+	// Format the results
 	columns, data, err := db.FormatTableData(rows)
 	if err != nil {
 		done <- struct{}{}
@@ -212,14 +232,30 @@ func (a *App) executeSelect(query db.Query, conn db.DatabaseConnection, isInline
 	done <- struct{}{}
 	elapsed := time.Since(start)
 
-	tableName, primaryKey := a.extractMetadata(conn, query, isInline)
-	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, query)
+	// Check for empty results
+	if len(data) == 0 {
+		fmt.Println("No results found")
+		return
+	}
+
+	// Create query object
+	q := db.Query{
+		Name: queryName,
+		SQL:  sql,
+	}
+	if query != nil {
+		q.Id = query.Id
+	}
+
+	// Render the TUI
+	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, q)
 	if err != nil {
 		printError("Error rendering table: %v", err)
 	}
 
+	// Handle re-run
 	if model.ShouldRerunQuery() {
-		a.executeQuery(model.GetEditedQuery(), conn, true)
+		onRerun(model.GetEditedQuery().SQL)
 	}
 }
 
@@ -237,20 +273,24 @@ func (a *App) extractMetadata(conn db.DatabaseConnection, query db.Query, isInli
 	return "", ""
 }
 
-func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInline bool, done chan struct{}, start time.Time) {
+func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInline bool) {
+	start := time.Now()
+	done := make(chan struct{})
+	go spinner.Wait(done)
+
 	err := conn.Exec(query.SQL)
 	done <- struct{}{}
 	elapsed := time.Since(start)
 
 	if err != nil {
-		printError("Could not execute command:  %v", err)
+		printError("Could not execute command: %v", err)
 	}
 
-	fmt.Println(styles.Success. Render(fmt.Sprintf("✓ Command executed successfully in %. 2fs", elapsed.Seconds())))
+	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Command executed successfully in %.2fs", elapsed.Seconds())))
 
 	if !isInline {
 		fmt.Println(styles.Faint.Render("\nExecuted SQL:"))
-		fmt.Println(parser. HighlightSQL(query. SQL))
+		fmt.Println(parser.HighlightSQL(query.SQL))
 	}
 }
 

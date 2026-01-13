@@ -100,6 +100,24 @@ func (s *SQLiteConnection) GetTableMetadata(tableName string) (*TableMetadata, e
 	return metadata, nil
 }
 
+func (s *SQLiteConnection) GetInfoSQL(infoType string) string {
+	switch infoType {
+	case "tables":
+		return `SELECT name
+		FROM sqlite_master
+		WHERE type = 'table'
+		  AND name NOT LIKE 'sqlite_%'
+		ORDER BY name`
+	case "views":
+		return `SELECT name
+		FROM sqlite_master
+		WHERE type = 'view'
+		ORDER BY name`
+	default:
+		return ""
+	}
+}
+
 func (s *SQLiteConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 	

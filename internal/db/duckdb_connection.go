@@ -114,6 +114,23 @@ package db
 // 	return metadata, nil
 // }
 //
+// func (d *DuckDBConnection) GetInfoSQL(infoType string) string {
+// 	switch infoType {
+// 	case "tables":
+// 		return `SELECT table_schema as schema,
+// 		       table_name as name
+// 		FROM information_schema.tables
+// 		WHERE table_type = 'BASE TABLE'
+// 		ORDER BY table_schema, table_name`
+// 	case "views":
+// 		return `SELECT table_schema as schema,
+// 		       table_name as name
+// 		FROM information_schema.views
+// 		ORDER BY table_schema, table_name`
+// 	default:
+// 		return ""
+// 	}
+// }
 // func (d *DuckDBConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 // 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 //
