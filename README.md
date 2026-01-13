@@ -19,10 +19,9 @@
 
 **A minimal CLI tool for managing and executing SQL queries across multiple databases. Written in Go, made beautiful with BubbleTea**
 
-[Quick Start](#-quick-start) • [Configuration](#%EF%B8%8F-configuration) • [Database Support](#%EF%B8%8F-database-support) • [SQL Dialects](#%EF%B8%8F-sql-dialect-differences) • [Features](#-features) • [Commands](#-all-commands) • [TUI Navigation](#%EF%B8%8F-tui-table-navigation) • [Troubleshooting](#%EF%B8%8F-troubleshooting) • [Roadmap](#%EF%B8%8F-roadmap) • [Contributing](#-contributing) • [Testing](#-testing)
+[Quick Start](#-quick-start) • [Configuration](#%EF%B8%8F-configuration) • [Database Support](#%EF%B8%8F-database-support) • [Features](#-features) • [Commands](#-all-commands) • [TUI Navigation](#%EF%B8%8F-tui-table-navigation) • [Roadmap](#%EF%B8%8F-roadmap) • [Contributing](#-contributing)
 
 </div>
-
 
 > Note: This project is currently in beta. Errors and unexpected behavior may occur
 
@@ -30,7 +29,7 @@
 
 ## 🎬 Demo
 
-![output3](https://github.com/user-attachments/assets/3fbf822f-d5fe-4393-959a-9a7f9f408f94)
+![output3-cropped](https://github.com/user-attachments/assets/8e350874-fd12-4686-8cc7-d40c258e7b50)
 
 
 ### Highlights
@@ -189,28 +188,13 @@ pam run daily_report
 pam run 2
 ```
 
-<img width="832" height="627" alt="image" src="https://github.com/user-attachments/assets/0a8e69eb-1dfc-40c5-92c7-cfbdf7e4d538" />
-
-### Interactive Editing
-
-Open queries in your favorite $EDITOR before execution.
-
-```bash
-# Edit existing query before running
-pam run daily_report --edit
-
-# Create and run a new query on the fly
-pam run --new
-
-# Edit all queries at once
-pam edit queries
-```
+<img width="1166" height="687" alt="image" src="https://github.com/user-attachments/assets/6f05c2dc-aa48-49ca-ab68-fdf3cfcc4eae" />
 
 ### TUI Table Viewer
 
 Navigate query results with Vim-style keybindings, update cells in-place, dekete rows and copy data effortlessly.
 
-<img width="859" height="604" alt="image" src="https://github.com/user-attachments/assets/da4a6141-7cb9-4263-b8bb-2afa771906a2" />
+<img width="1155" height="689" alt="image" src="https://github.com/user-attachments/assets/839bb77d-b358-43d0-98cd-0dc8102a9ac0" />
 
 **Key Features:**
 - Syntax-highlighted SQL display
@@ -233,18 +217,43 @@ pam switch mysql_prod
 # Check current connection
 pam status
 ```
+<div align=center>
+  <img width="425" height="503" alt="image" src="https://github.com/user-attachments/assets/e291de99-3c03-4e2a-b559-dcbbb89dc232" />
+</div>
 
 ---
+### Interactive Editing
+
+Open queries in your favorite $EDITOR before execution.
+
+
 
 ### 📝 Editor Integration
 
 Pam uses your `$EDITOR` environment variable for editing queries and UPDATE/DELETE statements.
+
+<div align=center>
+  <img width="448" height="238" alt="image" src="https://github.com/user-attachments/assets/f416f41a-8ec3-4a35-86e7-0bba6596f75f" />
+</div>
 
 ```bash
 # Set your preferred editor
 export EDITOR=vim
 export EDITOR=nano
 export EDITOR=code
+```
+
+You can also use the editor to edit queries before running them
+
+```bash
+# Edit existing query before running
+pam run daily_report --edit
+
+# Create and run a new query on the fly
+pam run --new
+
+# Edit all queries at once
+pam edit queries
 ```
 
 ---
@@ -330,10 +339,10 @@ Press `v` to enter visual mode, then navigate to select a range of cells.  Press
 - [x] Query editing in external editor
 - [x] Primary key detection
 - [x] Column type indicators
+- [x] Row limit configuration option
 
 ### v0.2 - Jim
 - [ ] Dynamic column width
-- [ ] Row limit configuration option
 - [ ] Program colors configuration option
 - [ ] Query parameter/placeholder support (e.g., `WHERE id = $1`)
 - [ ] Query execution history with persistence
