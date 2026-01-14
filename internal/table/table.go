@@ -7,8 +7,8 @@ import (
 	"github.com/eduardofuncao/pam/internal/db"
 )
 
-func Render(columns []string, data [][]string, elapsed time.Duration, conn db. DatabaseConnection, tableName, primaryKeyCol string, query db.Query) (Model, error) {
-	model := New(columns, data, elapsed, conn, tableName, primaryKeyCol, query)
+func Render(columns []string, data [][]string, elapsed time.Duration, conn db.DatabaseConnection, tableName, primaryKeyCol string, query db.Query, columnWidth int) (Model, error) {
+	model := New(columns, data, elapsed, conn, tableName, primaryKeyCol, query, columnWidth)
 	p := tea.NewProgram(model)
 	finalModel, err := p.Run()
 	if err != nil {

@@ -248,7 +248,7 @@ func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, q
 	}
 
 	// Render the TUI
-	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, q)
+	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, q, a.config.DefaultColumnWidth)
 	if err != nil {
 		printError("Error rendering table: %v", err)
 	}

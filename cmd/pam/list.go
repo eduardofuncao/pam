@@ -37,7 +37,7 @@ func (a *App) handleList() {
 
 	case "queries":
 		if a.config.CurrentConnection == "" {
-			printError("No active connection.  Use 'pam switch <connection>' first")
+			printError("No active connection.  Use 'pam switch <connection>' or 'pam init' first")
 		}
 		conn := a.config.Connections[a.config.CurrentConnection]
 		if len(conn.Queries) == 0 {

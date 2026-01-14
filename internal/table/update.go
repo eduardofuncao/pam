@@ -74,7 +74,7 @@ func (m Model) handleWindowResize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
 	m.height = msg.Height
 
-	m.visibleCols = (m.width - 2) / (cellWidth + 1)
+	m.visibleCols = (m.width - 2) / (m.cellWidth + 1)
 	if m.visibleCols > m.numCols() {
 		m.visibleCols = m.numCols()
 	}

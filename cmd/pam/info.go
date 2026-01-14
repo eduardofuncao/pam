@@ -19,7 +19,7 @@ func (a *App) handleInfo() {
 	}
 
 	if a.config.CurrentConnection == "" {
-		printError("No active connection. Use 'pam switch <connection>' first")
+		printError("No active connection. Use 'pam switch <connection>' or 'pam init' first")
 	}
 
 	conn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])

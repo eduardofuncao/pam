@@ -38,7 +38,7 @@ func (m Model) View() string {
 	separatorWidth := 0
 	endCol := min(m.offsetX+m.visibleCols, m.numCols())
 	for j := m.offsetX; j < endCol; j++ {
-		separatorWidth += cellWidth
+		separatorWidth += m.cellWidth
 		if j < endCol-1 {
 			separatorWidth += 1
 		}
@@ -80,7 +80,7 @@ func (m Model) renderHeader() string {
 		}
 
 		columnDisplay := pkIcon + typeIcon + m.columns[j]
-		content := formatCell(columnDisplay)
+		content := formatCell(columnDisplay, m.cellWidth)
 		cells = append(cells, styles.TableHeader.Render(content))
 	}
 
@@ -92,7 +92,7 @@ func (m Model) renderDataRow(rowIndex int) string {
 	endCol := min(m.offsetX+m.visibleCols, m.numCols())
 
 	for j := m.offsetX; j < endCol; j++ {
-		content := formatCell(m.data[rowIndex][j])
+		content := formatCell(m.data[rowIndex][j], m.cellWidth)
 		style := m.getCellStyle(rowIndex, j)
 		cells = append(cells, style.Render(content))
 	}
@@ -174,7 +174,7 @@ func (m Model) getCellStyle(row, col int) lipgloss.Style {
 	return styles.TableCell
 }
 
-func formatCell(content string) string {
+func formatCell(content string, cellWidth int) string {
 	runes := []rune(content)
 	runeCount := len(runes)
 

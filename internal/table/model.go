@@ -9,8 +9,6 @@ import (
 	"github.com/eduardofuncao/pam/internal/parser"
 )
 
-const cellWidth = 15
-
 type Model struct {
 	width            int
 	height           int
@@ -40,11 +38,12 @@ type Model struct {
 	shouldRerunQuery bool
 	editedQuery      string
 	lastExecutedQuery string
+	cellWidth        int
 }
 
 type blinkMsg struct{}
 
-func New(columns []string, data [][]string, elapsed time.Duration, conn db.DatabaseConnection, tableName, primaryKeyCol string, query db.Query) Model {
+func New(columns []string, data [][]string, elapsed time.Duration, conn db.DatabaseConnection, tableName, primaryKeyCol string, query db.Query, columnWidth int) Model {
 	columnTypes := make([]string, len(columns))
 	if tableName != "" && conn != nil {
 		metadata, err := conn.GetTableMetadata(tableName)
@@ -63,7 +62,7 @@ func New(columns []string, data [][]string, elapsed time.Duration, conn db.Datab
 				}
 		}
 	}
-	
+
 	return Model{
 		selectedRow:      0,
 		selectedCol:      0,
@@ -80,6 +79,7 @@ func New(columns []string, data [][]string, elapsed time.Duration, conn db.Datab
 		currentQuery:     query,
 		shouldRerunQuery: false,
 		editedQuery:      "",
+		cellWidth:        columnWidth,
 	}
 }
 

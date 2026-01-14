@@ -12,11 +12,12 @@ var CfgPath = os.ExpandEnv("$HOME/.config/pam/")
 var CfgFile = filepath.Join(CfgPath, "config.yaml")
 
 type Config struct {
-	CurrentConnection string                     `yaml:"current_connection"`
-	Connections       map[string]*ConnectionYAML `yaml:"connections"`
-	Style             Style                      `yaml:"style"`
-	History           History                    `yaml:"history"`
-	DefaultRowLimit   int                        `yaml:"default_row_limit"`
+	CurrentConnection     string                     `yaml:"current_connection"`
+	Connections           map[string]*ConnectionYAML `yaml:"connections"`
+	Style                 Style                      `yaml:"style"`
+	History               History                    `yaml:"history"`
+	DefaultRowLimit       int                        `yaml:"default_row_limit"`
+	DefaultColumnWidth    int                        `yaml:"default_column_width"`
 }
 
 type Style struct {
@@ -33,11 +34,12 @@ func LoadConfig(path string) (*Config, error) {
 		if os.IsNotExist(err) {
 			fmt.Println("Creating blank config file at", CfgFile)
 			cfg := &Config{
-				CurrentConnection: "",
-				Connections:       make(map[string]*ConnectionYAML),
-				Style:             Style{},
-				History:           History{},
-				DefaultRowLimit:   1000,
+				CurrentConnection:  "",
+				Connections:        make(map[string]*ConnectionYAML),
+				Style:              Style{},
+				History:            History{},
+				DefaultRowLimit:    1000,
+				DefaultColumnWidth: 15,
 			}
 			err := cfg.Save()
 			if err != nil {
