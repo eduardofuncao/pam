@@ -54,6 +54,14 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if cfg.DefaultColumnWidth == 0 {
+		cfg.DefaultColumnWidth = 15
+	}
+	if cfg.DefaultRowLimit == 0 {
+		cfg.DefaultRowLimit = 1000
+	}
+
 	return &cfg, nil
 }
 
