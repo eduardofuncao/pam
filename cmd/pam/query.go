@@ -200,7 +200,7 @@ func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection, isInline 
 func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, query *db.Query, isInline bool, onRerun func(string)) {
 	start := time.Now()
 	done := make(chan struct{})
-	go spinner.Wait(done)
+	go spinner.CircleWaitWithTimer(done)
 
 	// Extract metadata if query provided
 	var tableName, primaryKey string
@@ -276,7 +276,7 @@ func (a *App) extractMetadata(conn db.DatabaseConnection, query db.Query, isInli
 func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInline bool) {
 	start := time.Now()
 	done := make(chan struct{})
-	go spinner.Wait(done)
+	go spinner.CircleWaitWithTimer(done)
 
 	err := conn.Exec(query.SQL)
 	done <- struct{}{}
