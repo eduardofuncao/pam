@@ -237,7 +237,7 @@ pam list connections
 # Switch active connection
 pam switch mysql_prod
 
-# Check current connection
+# Display current connection and check if it is reacheable
 pam status
 ```
 <div align=center>
