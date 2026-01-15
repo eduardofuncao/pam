@@ -308,7 +308,7 @@ pam list queries
 
 # Search for specific queries
 pam list queries emp    # Finds queries with 'emp' in name or SQL
-pam list queries employees
+pam list queries employees --oneline # displays each query in one line
 
 # Run by name or ID
 pam run daily_report
@@ -401,6 +401,8 @@ pam edit queries
 | `add <name> [sql]` | Add a new saved query | `pam add users "SELECT * FROM users"` |
 | `remove <name\|id>` | Remove a saved query | `pam remove users` or `pam remove 3` |
 | `list queries` | List all saved queries | `pam list queries` |
+| `list queries --oneline` | lists each query in one line | `pam list -o` |
+| `list queries <searchterm>` | lists queries containing search term | `pam list employees` |
 | `run <name\|id\|sql>` | Execute a query | `pam run users` or `pam run 2` |
 | `run --edit` | Edit query before running | `pam run users --edit` |
 | `run --new` | Create and run new query | `pam run --new` |
