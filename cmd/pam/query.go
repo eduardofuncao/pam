@@ -32,16 +32,16 @@ func (a *App) handleQuery() {
 	}
 
 	flags := parseQueryFlags()
-	conn := config.FromConnectionYaml(a.config. Connections[a.config.CurrentConnection])
-	
+	conn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
+
 	resolved := a.resolveQuery(flags, conn)
-	
+
 	if flags.editMode && !flags.newQuery {
 		resolved.query = a.editQueryOrExit(resolved.query)
 	}
-	
+
 	a.saveIfNeeded(resolved)
-	a.executeQuery(resolved.query, conn, ! resolved.saveable)
+	a.executeQuery(resolved.query, conn, !resolved.saveable)
 }
 
 func parseQueryFlags() queryFlags {
@@ -51,7 +51,7 @@ func parseQueryFlags() queryFlags {
 		case "--edit", "-e":
 			flags.editMode = true
 		case "--new", "-n":
-			flags. newQuery = true
+			flags.newQuery = true
 		default:
 			flags.selector = arg
 		}
@@ -67,7 +67,7 @@ func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolve
 			saveable: false,
 		}
 	}
-	
+
 	// Priority 2: Inline SQL (pam run "select * from employees""
 	if flags.selector != "" && isLikelySQL(flags.selector) {
 		return resolvedQuery{
@@ -75,11 +75,11 @@ func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolve
 			saveable: false,
 		}
 	}
-	
+
 	// Priority 3: Saved query by name/ID
 	if flags.selector != "" {
-		q, found := db.FindQueryWithSelector(conn. GetQueries(), flags.selector)
-		if ! found {
+		q, found := db.FindQueryWithSelector(conn.GetQueries(), flags.selector)
+		if !found {
 			printError("Could not find query with name/id: %v", flags.selector)
 		}
 		return resolvedQuery{
@@ -87,14 +87,14 @@ func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolve
 			saveable: true,
 		}
 	}
-	
+
 	// Priority 4: Last run query
-	lastQuery := a.config. Connections[a.config.CurrentConnection]. LastQuery
-	if lastQuery. Name == "" {
+	lastQuery := a.config.Connections[a.config.CurrentConnection].LastQuery
+	if lastQuery.Name == "" {
 		printError("No last query found.  Usage: pam run <query-name|sql> or pam run -n")
 	}
 	return resolvedQuery{
-		query:     lastQuery,
+		query:    lastQuery,
 		saveable: true,
 	}
 }
@@ -120,14 +120,14 @@ func (a *App) saveIfNeeded(resolved resolvedQuery) {
 	if !resolved.saveable {
 		return
 	}
-	
+
 	connData := a.config.Connections[a.config.CurrentConnection]
-	
+
 	// Save edited query back to config
 	if resolved.query.Name != "<inline>" && resolved.query.SQL != "" {
-		connData. Queries[resolved.query.Name] = resolved.query
+		connData.Queries[resolved.query.Name] = resolved.query
 	}
-	
+
 	// Save as last query
 	connData.LastQuery = resolved.query
 	a.config.Save()
@@ -155,7 +155,7 @@ func (a *App) openExternalEditor(query db.Query) (db.Query, error) {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	if err := cmd.Run(); err != nil {
 		return db.Query{}, fmt.Errorf("run editor: %w", err)
 	}
@@ -186,7 +186,7 @@ func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection, isInline 
 			editedQuery := db.Query{
 				Name: originalQuery.Name,
 				SQL:  editedSQL,
-				Id:    originalQuery.Id,
+				Id:   originalQuery.Id,
 			}
 			a.executeQuery(editedQuery, conn, true)
 		})
@@ -262,14 +262,14 @@ func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, q
 func (a *App) extractMetadata(conn db.DatabaseConnection, query db.Query, isInline bool) (string, string) {
 	metadata, err := db.InferTableMetadata(conn, query)
 	if err == nil && metadata != nil {
-		return metadata.TableName, metadata. PrimaryKey
+		return metadata.TableName, metadata.PrimaryKey
 	}
-	
-	if ! isInline {
-		fmt. Fprintf(os.Stderr, styles. Faint.Render("Warning: Could not extract table metadata: %v\n"), err)
-		fmt.Fprint(os. Stderr, styles.Faint.Render("Update functionality will be limited.\n"))
+
+	if !isInline {
+		fmt.Fprintf(os.Stderr, styles.Faint.Render("Warning: Could not extract table metadata: %v\n"), err)
+		fmt.Fprint(os.Stderr, styles.Faint.Render("Update functionality will be limited.\n"))
 	}
-	
+
 	return "", ""
 }
 
@@ -295,9 +295,9 @@ func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInl
 }
 
 func isSelectQuery(sql string) bool {
-	upper := strings. ToUpper(strings.TrimSpace(sql))
+	upper := strings.ToUpper(strings.TrimSpace(sql))
 	keywords := []string{"SELECT", "WITH", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "PRAGMA"}
-	
+
 	for _, kw := range keywords {
 		if upper == kw || strings.HasPrefix(upper, kw+" ") {
 			return true
