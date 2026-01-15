@@ -1,0 +1,213 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: pam
+  GO_VERSION: '1.25'
+
+jobs:
+  build-linux-amd64:
+    name: Build Linux AMD64
+    runs-on: ubuntu-latest
+    container:
+      image: "ghcr.io/goreleaser/goreleaser-cross:v1.22"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix git ownership
+        run: git config --global --add safe.directory '*'
+
+      - name: Build Linux AMD64
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p dist
+          go build -buildvcs=false -ldflags="-s -w" -o dist/${{ env.APP_NAME }}-linux-amd64 ./cmd/pam
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64
+          path: dist/${{ env.APP_NAME }}-linux-amd64
+
+  build-linux-arm64:
+    name: Build Linux ARM64
+    runs-on: ubuntu-latest
+    container:
+      image: "ghcr.io/goreleaser/goreleaser-cross:v1.22"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix git ownership
+        run: git config --global --add safe.directory '*'
+
+      - name: Build Linux ARM64
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: arm64
+          CC: aarch64-linux-gnu-gcc
+        run: |
+          mkdir -p dist
+          go build -buildvcs=false -ldflags="-s -w" -o dist/${{ env.APP_NAME }}-linux-arm64 ./cmd/pam
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: dist/${{ env.APP_NAME }}-linux-arm64
+
+  build-darwin-amd64:
+    name: Build macOS AMD64
+    runs-on: macos-15-large
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build macOS AMD64
+        env:
+          CGO_ENABLED: 1
+          GOOS: darwin
+          GOARCH: amd64
+        run: |
+          mkdir -p dist
+          go build -buildvcs=false -ldflags="-s -w" -o dist/${{ env.APP_NAME }}-darwin-amd64 ./cmd/pam
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-amd64
+          path: dist/${{ env.APP_NAME }}-darwin-amd64
+
+  build-darwin-arm64:
+    name: Build macOS ARM64
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build macOS ARM64
+        env:
+          CGO_ENABLED: 1
+          GOOS: darwin
+          GOARCH: arm64
+        run: |
+          mkdir -p dist
+          go build -buildvcs=false -ldflags="-s -w" -o dist/${{ env.APP_NAME }}-darwin-arm64 ./cmd/pam
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-arm64
+          path: dist/${{ env.APP_NAME }}-darwin-arm64
+
+  build-windows-amd64:
+    name: Build Windows AMD64
+    runs-on: ubuntu-latest
+    container:
+      image: "ghcr.io/goreleaser/goreleaser-cross:v1.22"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix git ownership
+        run: git config --global --add safe.directory '*'
+
+      - name: Build Windows AMD64
+        env:
+          CGO_ENABLED: 1
+          GOOS: windows
+          GOARCH: amd64
+          CC: x86_64-w64-mingw32-gcc
+        run: |
+          mkdir -p dist
+          go build -buildvcs=false -ldflags="-s -w" -o dist/${{ env.APP_NAME }}-windows-amd64.exe ./cmd/pam
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          path: dist/${{ env.APP_NAME }}-windows-amd64.exe
+
+  create-release:
+    name: Create Release
+    needs: 
+      - build-linux-amd64
+      - build-linux-arm64
+      - build-darwin-amd64
+      - build-darwin-arm64
+      - build-windows-amd64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create archives
+        run: |
+          mkdir -p release
+          
+          # Linux AMD64
+          tar -czf release/${{ env.APP_NAME }}_${GITHUB_REF_NAME}_linux_amd64.tar.gz -C artifacts/linux-amd64 .
+          
+          # Linux ARM64
+          tar -czf release/${{ env.APP_NAME }}_${GITHUB_REF_NAME}_linux_arm64.tar.gz -C artifacts/linux-arm64 .
+          
+          # macOS AMD64
+          tar -czf release/${{ env.APP_NAME }}_${GITHUB_REF_NAME}_darwin_amd64.tar.gz -C artifacts/darwin-amd64 .
+          
+          # macOS ARM64
+          tar -czf release/${{ env.APP_NAME }}_${GITHUB_REF_NAME}_darwin_arm64.tar.gz -C artifacts/darwin-arm64 .
+          
+          # Windows AMD64
+          cd artifacts/windows-amd64 && zip ../../release/${{ env.APP_NAME }}_${GITHUB_REF_NAME}_windows_amd64.zip * && cd ../..
+          
+          # Generate checksums
+          cd release
+          sha256sum * > checksums.txt
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

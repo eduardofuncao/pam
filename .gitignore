@@ -1,6 +1,9 @@
 /*
-
 !.gitignore
+!.goreleaser.yaml
+!.github/
+!.github/workflows/
+!.github/workflows/release.yml
 
 !go.mod
 !go.sum
@@ -11,5 +14,3 @@
 
 !cmd/
 !internal/
-
-
