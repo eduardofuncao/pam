@@ -28,7 +28,11 @@
 
 ---
 
-## 🎬 Demo
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/464275ac-085e-451f-b783-c991d24d3635" />
+    Demo
+</h2>
+
 
 ![pam-demo](https://github.com/user-attachments/assets/b62bec1d-2255-4d02-9b7f-1c99afbeb664)
 
@@ -42,7 +46,10 @@
 
 ---
 
-## 🚀 Quick Start
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/30765e98-13b3-4c18-81e7-faf224b60e0b" />
+    Quick Start
+</h2>
 
 ### Installation
 Go to [the releases page](https://github.com/eduardofuncao/pam/releases) and find the correct version for your system. Download it and make sure the file is executable and moved to a directory in your $PATH.
@@ -201,7 +208,10 @@ q          # Quit back to terminal
 
 ---
 
-## ⚙️ Configuration
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle" src="https://github.com/user-attachments/assets/8f5037c9-e616-4065-adfc-cd598621c887" />
+    Configuration
+</h2>
 
 Pam stores its configuration at `~/.config/pam/config.yaml`.
 
@@ -213,7 +223,11 @@ The width for all columns in the table TUI is fixed to a constant size, which ca
 
 ---
 
-## 🗄️ Database Support
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/c46a2565-a58c-472c-9393-96724d9716da" />
+    Database Support
+</h2>
+
 Examples of init/create commands to start working with different database types
 
 ### PostgreSQL
@@ -264,7 +278,7 @@ pam init clickhouse-docker clickhouse "clickhouse://myuser:mypassword@localhost:
 
 ---
 
-## 🐝 Dbeesly
+### 🐝 Dbeesly
 
 To run containerized test database servers for all supported databases, use the sister project [dbeesly](https://github.com/eduardofuncao/dbeesly)
 
@@ -272,7 +286,11 @@ To run containerized test database servers for all supported databases, use the 
 
 ---
 
-## ✨ Features
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/c125a9f2-d4b6-4ec3-aef4-f52e1c8f48e8" />
+    Features
+</h2>
+
 
 ### Query Management
 
@@ -311,7 +329,7 @@ Navigate query results with Vim-style keybindings, update cells in-place, dekete
 - Live cell editing
 - Visual selection mode
 
-### 🔄 Connection Switching
+### Connection Switching
 
 Manage multiple database connections and switch between them instantly.
 
@@ -331,7 +349,7 @@ pam status
 
 ---
 
-### 📝 Editor Integration
+### Editor Integration
 
 Pam uses your `$EDITOR` environment variable for editing queries and UPDATE/DELETE statements.
 
@@ -361,7 +379,10 @@ pam edit queries
 
 ---
 
-## 📖 All Commands
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/4b1425ae-7918-4a3f-b37c-41c3e443929e" />
+    All Commands
+</h2>
 
 ### Connection Management
 
@@ -401,7 +422,10 @@ pam edit queries
 
 ---
 
-## ⌨️ TUI Table Navigation
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/504a8488-69bf-43b4-860b-0659a6db3c69" />
+    TUI Table Navigation
+</h2>
 
 When viewing query results in the TUI, you have full Vim-style navigation and editing capabilities. 
 
@@ -436,10 +460,15 @@ When viewing query results in the TUI, you have full Vim-style navigation and ed
 Press `v` to enter visual mode, then navigate to select a range of cells.  Press `y` or `Enter` to copy the selection.
 
 ---
-## 🗺️ Roadmap
+
+<h2>
+    <img width="auto" height="24" alt="image" style="vertical-align:middle;" src="https://github.com/user-attachments/assets/432c6b41-b2e0-4326-a3cc-7b349a987bb0" />
+    Roadmap
+</h2>
+
 > Note: This project is currently in beta. Errors and unexpected behavior may occur
 
-### v0.1 Ryan
+### v0.1.0 Ryan
 - [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle, SQL Server, ClickHouse)
 - [x] Query library with save/edit/remove functionality
 - [x] Interactive TUI with Vim navigation
@@ -452,7 +481,7 @@ Press `v` to enter visual mode, then navigate to select a range of cells.  Press
 - [x] Row limit configuration option
 - [x] Info command, list all tables/views in current connection
 
-### v0.2 - Kelly
+### v0.2.0 - Kelly
 - [ ] Dynamic column width
 - [ ] Program colors configuration option
 - [ ] Query parameter/placeholder support (e.g., `WHERE id = $1`)
@@ -460,7 +489,7 @@ Press `v` to enter visual mode, then navigate to select a range of cells.  Press
 - [ ] CSV/JSON export for multiple cells
 - [ ] Display column types correctly for join queries
 
-### v0.3 - Jim
+### v0.3.0 - Jim
 - [ ] Shell autocomplete (bash, fish, zsh)
 - [ ] `pam info table <table>` - Show table metadata (columns, types, constraints)
 - [ ] `pam info connection` - Show connection/database overview
@@ -468,7 +497,7 @@ Press `v` to enter visual mode, then navigate to select a range of cells.  Press
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Get started with detailed instructions from [CONTRIBUTING.md](CONTRIBUTING.md)
 
@@ -478,7 +507,7 @@ Thanks a lot to all the contributors:
 <a href="https://github.com/eduardofuncao"><img src="https://github.com/eduardofuncao.png" width="40" /></a>
 
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Pam wouldn't exist without the inspiration and groundwork laid by these fantastic projects:
 
@@ -493,7 +522,7 @@ Built with:
 
 ---
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details
 
