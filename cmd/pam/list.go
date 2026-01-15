@@ -11,12 +11,42 @@ import (
 	"github.com/eduardofuncao/pam/internal/styles"
 )
 
+type listFlags struct {
+	oneline    bool
+	searchTerm string
+}
+
+func parseListFlags() (listFlags, []string) {
+	flags := listFlags{}
+	remainingArgs := []string{}
+	args := os.Args[2:]
+
+	for _, arg := range args {
+		if arg == "--oneline" || arg == "-o" {
+			flags.oneline = true
+		} else if !strings.HasPrefix(arg, "-") {
+			remainingArgs = append(remainingArgs, arg)
+		}
+	}
+
+	return flags, remainingArgs
+}
+
 func (a *App) handleList() {
+	flags, args := parseListFlags()
+
 	var objectType string
-	if len(os.Args) < 3 {
+	if len(args) == 0 {
 		objectType = "queries" // Default to queries
+	} else if args[0] == "queries" || args[0] == "connections" {
+		objectType = args[0]
+		if len(args) > 1 {
+			flags.searchTerm = args[1]
+		}
 	} else {
-		objectType = os.Args[2]
+		// First arg is search term, default to queries
+		objectType = "queries"
+		flags.searchTerm = args[0]
 	}
 
 	switch objectType {
@@ -45,21 +75,16 @@ func (a *App) handleList() {
 			return
 		}
 
-		var searchTerm string
-		if len(os.Args) > 3 {
-			searchTerm = os.Args[3]
-		}
-
 		// Get sorted list of queries
 		queryList := make([]db.Query, 0, len(conn.Queries))
 		for _, query := range conn.Queries {
 			// If no search term, include all queries
-			if searchTerm == "" {
+			if flags.searchTerm == "" {
 				queryList = append(queryList, query)
 				continue
 			}
 
-			searchLower := strings.ToLower(searchTerm)
+			searchLower := strings.ToLower(flags.searchTerm)
 			nameMatch := strings.Contains(strings.ToLower(query.Name), searchLower)
 			sqlMatch := strings.Contains(strings.ToLower(query.SQL), searchLower)
 
@@ -72,29 +97,66 @@ func (a *App) handleList() {
 			return queryList[i].Id < queryList[j].Id
 		})
 
-		if searchTerm != "" && len(queryList) == 0 {
-			fmt.Printf(styles.Faint.Render("No queries found matching '%s'\n"), searchTerm)
+		if flags.searchTerm != "" && len(queryList) == 0 {
+			fmt.Printf(styles.Faint.Render("No queries found matching '%s'\n"), flags.searchTerm)
+			return
+		}
+
+		// Display in oneline format if flag is set
+		if flags.oneline {
+			displayQueriesOneline(queryList)
 			return
 		}
 
 		for _, query := range queryList {
 			displayName := query.Name
-			if searchTerm != "" {
-				displayName = highlightMatches(query.Name, searchTerm)
+			if flags.searchTerm != "" {
+				displayName = highlightMatches(query.Name, flags.searchTerm)
 			}
-			formatedItem := fmt.Sprintf("◆ %d/%s", query.Id, displayName)
+
+			// Extract table name
+			tableName := db.ExtractTableNameFromSQL(query.SQL)
+			if tableName == "" {
+				tableName = "<unknown>"
+			}
+			if db.HasJoinClause(query.SQL) {
+				tableName = tableName + " <join>"
+			}
+
+			formatedItem := fmt.Sprintf("◆ %d/%s (%s)", query.Id, displayName, tableName)
 			fmt.Println(styles.Title.Render(formatedItem))
 
 			displaySQL := query.SQL
-			if searchTerm != "" {
-				displaySQL = highlightMatches(query.SQL, searchTerm)
+			if flags.searchTerm != "" {
+				displaySQL = highlightMatches(query.SQL, flags.searchTerm)
 			}
 			fmt.Print(parser.HighlightSQL(parser.FormatSQLWithLineBreaks(displaySQL)))
+			fmt.Println()
 			fmt.Println()
 		}
 
 	default:
 		printError("Unknown list type: %s.  Use 'queries' or 'connections'", objectType)
+	}
+}
+
+func displayQueriesOneline(queries []db.Query) {
+	for _, query := range queries {
+		tableName := db.ExtractTableNameFromSQL(query.SQL)
+		hasJoin := db.HasJoinClause(query.SQL)
+
+		tableDisplay := tableName
+		if hasJoin && tableName != "" {
+			tableDisplay = tableName + " <join>"
+		} else if tableName == "" {
+			tableDisplay = "<unknown>"
+		}
+
+		fmt.Printf("%s %s %s\n",
+			styles.Faint.Render(fmt.Sprintf("%d", query.Id)),
+			styles.Title.Render(query.Name),
+			tableDisplay,
+		)
 	}
 }
 
