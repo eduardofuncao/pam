@@ -25,7 +25,7 @@ func NewSQLiteConnection(name, connStr string) (*SQLiteConnection, error) {
 }
 
 func (s *SQLiteConnection) Open() error {
-	db, err := sql.Open("sqlite3", s. ConnString)
+	db, err := sql.Open("sqlite3", s.ConnString)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,10 @@ func (s *SQLiteConnection) Query(queryName string, args ...any) (any, error) {
 	return s.db.Query(query.SQL, args...)
 }
 
-func (s *SQLiteConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+func (s *SQLiteConnection) ExecQuery(
+	sql string,
+	args ...any,
+) (*sql.Rows, error) {
 	return s.db.Query(sql, args...)
 }
 
@@ -64,42 +67,86 @@ func (s *SQLiteConnection) Exec(sql string, args ...any) error {
 	return err
 }
 
-func (s *SQLiteConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
+func (s *SQLiteConnection) GetTableMetadata(
+	tableName string,
+) (*TableMetadata, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("database is not open")
 	}
-	
+
 	pkQuery := fmt.Sprintf("PRAGMA table_info(%s)", tableName)
-	
+
 	rows, err := s.db.Query(pkQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query sqlite table info: %w", err)
 	}
 	defer rows.Close()
-	
+
 	metadata := &TableMetadata{
 		TableName: tableName,
 	}
-	
+
 	for rows.Next() {
 		var cid int
 		var name, colType string
 		var notNull, pk int
 		var dfltValue sql.NullString
-		
-		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+
+		if err := rows.Scan(
+			&cid,
+			&name,
+			&colType,
+			&notNull,
+			&dfltValue,
+			&pk,
+		); err != nil {
 			continue
 		}
-		
-		metadata.Columns = append(metadata. Columns, name)
-		metadata.ColumnTypes = append(metadata.ColumnTypes, colType)  // ADD THIS
-		
+
+		metadata.Columns = append(metadata.Columns, name)
+		metadata.ColumnTypes = append(metadata.ColumnTypes, colType)
+
 		if pk == 1 {
 			metadata.PrimaryKey = name
 		}
 	}
-	
+
 	return metadata, nil
+}
+
+func (s *SQLiteConnection) GetTables() ([]string, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	query := `
+		SELECT name
+		FROM sqlite_master
+		WHERE type = 'table'
+		  AND name NOT LIKE 'sqlite_%'
+		ORDER BY name
+	`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			return nil, fmt.Errorf("failed to scan table name: %w", err)
+		}
+		tables = append(tables, tableName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating tables: %w", err)
+	}
+
+	return tables, nil
 }
 
 func (s *SQLiteConnection) GetInfoSQL(infoType string) string {
@@ -120,9 +167,11 @@ func (s *SQLiteConnection) GetInfoSQL(infoType string) string {
 	}
 }
 
-func (s *SQLiteConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
+func (s *SQLiteConnection) BuildUpdateStatement(
+	tableName, columnName, currentValue, pkColumn, pkValue string,
+) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
-	
+
 	if pkColumn != "" && pkValue != "" {
 		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
 		return fmt.Sprintf(
@@ -134,7 +183,7 @@ func (s *SQLiteConnection) BuildUpdateStatement(tableName, columnName, currentVa
 			escapedPkValue,
 		)
 	}
-	
+
 	return fmt.Sprintf(
 		"-- SQLite UPDATE statement\n-- No primary key specified. Edit WHERE clause manually.\nUPDATE %s\nSET %s = '%s'\nWHERE <condition>;",
 		tableName,
@@ -143,9 +192,11 @@ func (s *SQLiteConnection) BuildUpdateStatement(tableName, columnName, currentVa
 	)
 }
 
-func (s *SQLiteConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkValue string) string {
+func (s *SQLiteConnection) BuildDeleteStatement(
+	tableName, primaryKeyCol, pkValue string,
+) string {
 	escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
-	
+
 	return fmt.Sprintf(
 		"-- SQLite DELETE statement\n-- WARNING: This will permanently delete data!\n-- Ensure the WHERE clause is correct.\n\nDELETE FROM %s\nWHERE %s = '%s';",
 		tableName,
