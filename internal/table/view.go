@@ -75,7 +75,8 @@ func (m Model) renderHeader() string {
 		}
 
 		pkIcon := ""
-		if m.primaryKeyCol != "" && j < len(m.columns) && m.columns[j] == m.primaryKeyCol {
+		if m.primaryKeyCol != "" && j < len(m.columns) &&
+			m.columns[j] == m.primaryKeyCol {
 			pkIcon = "⚿ "
 		}
 
@@ -125,12 +126,30 @@ func (m Model) renderFooter() string {
 
 	updateInfo := ""
 	delInfo := ""
+	enterInfo := ""
 
-	if m.tableName != "" && m.primaryKeyCol != "" {
-		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate")
+	if m.isTablesList {
+		// Special footer for tables list
+		enterInfo = styles.TableHeader.Render(
+			"↵",
+		) + styles.Faint.Render(
+			"enter",
+		)
+		updateInfo = ""
+		delInfo = ""
+	} else if m.tableName != "" && m.primaryKeyCol != "" {
+		updateInfo = styles.TableHeader.Render(
+			"u",
+		) + styles.Faint.Render(
+			"pdate",
+		)
 		delInfo = styles.TableHeader.Render("D") + styles.Faint.Render("el")
 	} else if m.tableName != "" {
-		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate (no PK)")
+		updateInfo = styles.TableHeader.Render(
+			"u",
+		) + styles.Faint.Render(
+			"pdate (no PK)",
+		)
 		delInfo = ""
 	} else {
 		// No table name means JOIN or complex query
@@ -145,12 +164,39 @@ func (m Model) renderFooter() string {
 	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
 
 	var footer string
-	footer = fmt.Sprintf("\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
-		cellPreview,
-		styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
-		styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-		styles.Faint.Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
-		updateInfo, delInfo, yank, sel, edit, quit, hjkl)
+	if m.isTablesList {
+		footer = fmt.Sprintf(
+			"\n%s%s %s | %s | %s  %s  %s  %s  %s",
+			cellPreview,
+			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
+			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
+			styles.Faint.Render(
+				fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
+			),
+			enterInfo,
+			yank,
+			edit,
+			quit,
+			hjkl,
+		)
+	} else {
+		footer = fmt.Sprintf(
+			"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+			cellPreview,
+			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
+			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
+			styles.Faint.Render(
+				fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
+			),
+			updateInfo,
+			delInfo,
+			yank,
+			sel,
+			edit,
+			quit,
+			hjkl,
+		)
+	}
 
 	return footer
 }
@@ -192,13 +238,19 @@ func getTypeIcon(typeName string) string {
 	// String/Text types
 	if strings.Contains(upper, "CHAR") || strings.Contains(upper, "TEXT") ||
 		strings.Contains(upper, "STRING") || strings.Contains(upper, "CLOB") ||
-		strings.Contains(upper, "VARCHAR") || strings.Contains(upper, "NVARCHAR") {
+		strings.Contains(
+			upper,
+			"VARCHAR",
+		) || strings.Contains(upper, "NVARCHAR") {
 		return "α"
 	}
 
 	// Integer types
 	if strings.Contains(upper, "INT") || strings.Contains(upper, "SERIAL") ||
-		strings.Contains(upper, "BIGINT") || strings.Contains(upper, "SMALLINT") ||
+		strings.Contains(
+			upper,
+			"BIGINT",
+		) || strings.Contains(upper, "SMALLINT") ||
 		strings.Contains(upper, "TINYINT") {
 		return "№"
 	}
@@ -206,7 +258,8 @@ func getTypeIcon(typeName string) string {
 	// Decimal/Float types
 	if strings.Contains(upper, "DECIMAL") || strings.Contains(upper, "NUMERIC") ||
 		strings.Contains(upper, "FLOAT") || strings.Contains(upper, "DOUBLE") ||
-		strings.Contains(upper, "REAL") || strings.Contains(upper, "NUMBER") ||
+		strings.Contains(upper, "REAL") ||
+		strings.Contains(upper, "NUMBER") ||
 		strings.Contains(upper, "MONEY") {
 		return "≈"
 	}
@@ -229,7 +282,10 @@ func getTypeIcon(typeName string) string {
 	// Binary/Blob types
 	if strings.Contains(upper, "BLOB") || strings.Contains(upper, "BINARY") ||
 		strings.Contains(upper, "BYTEA") || strings.Contains(upper, "RAW") ||
-		strings.Contains(upper, "VARBINARY") || strings.Contains(upper, "IMAGE") {
+		strings.Contains(
+			upper,
+			"VARBINARY",
+		) || strings.Contains(upper, "IMAGE") {
 		return "◆"
 	}
 
@@ -260,7 +316,8 @@ func getTypeIcon(typeName string) string {
 
 	// Geometric/Spatial types
 	if strings.Contains(upper, "GEOMETRY") || strings.Contains(upper, "POINT") ||
-		strings.Contains(upper, "POLYGON") || strings.Contains(upper, "LINE") {
+		strings.Contains(upper, "POLYGON") ||
+		strings.Contains(upper, "LINE") {
 		return "◉"
 	}
 

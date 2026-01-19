@@ -54,9 +54,9 @@ func (a *App) Run() {
 		a.handleStatus()
 	case "history":
 		a.handleHistory()
-	case "tables":
+	case "tables", "t":
 		a.handleTables()
-	case "disconnect":
+	case "disconnect", "clear", "unset":
 		a.handleDisconnect()
 	case "help":
 		a.handleHelp()

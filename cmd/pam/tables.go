@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
-	"github.com/eduardofuncao/pam/internal/styles"
+	"github.com/eduardofuncao/pam/internal/spinner"
+	"github.com/eduardofuncao/pam/internal/table"
 )
 
 type tablesFlags struct {
@@ -52,31 +54,9 @@ func (a *App) handleTables() {
 	}
 	defer conn.Close()
 
-	tables, err := conn.GetTables()
-	if err != nil {
-		printError("Could not retrieve tables: %v", err)
-	}
-
-	if len(tables) == 0 {
-		fmt.Println(styles.Faint.Render("No tables found"))
-		return
-	}
-
 	// If a table name is provided, run SELECT * FROM table
 	if len(args) > 0 {
 		tableName := args[0]
-		found := false
-		for _, t := range tables {
-			if strings.EqualFold(t, tableName) {
-				tableName = t
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			printError("Table '%s' not found", args[0])
-		}
 
 		// Create a temporary query object with table metadata
 		query := db.Query{
@@ -121,31 +101,142 @@ func (a *App) handleTables() {
 		return
 	}
 
-	// Display tables list
+	// Display tables list using GetInfoSQL
+	queryStr := conn.GetInfoSQL("tables")
+	if queryStr == "" {
+		printError("Could not get tables SQL for this database type")
+	}
+
+	// Extract just the name column by wrapping in a subquery
+	nameOnlyQuery := fmt.Sprintf(
+		"SELECT name FROM (%s) AS tables_info ORDER BY name",
+		queryStr,
+	)
+
 	if flags.oneline {
-		for _, table := range tables {
-			fmt.Println(table)
+		// For oneline mode, execute query and print just the table names
+		rows, err := conn.ExecQuery(nameOnlyQuery)
+		if err != nil {
+			printError("Could not retrieve tables: %v", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var tableName string
+			if err := rows.Scan(&tableName); err != nil {
+				printError("Could not scan row: %v", err)
+			}
+			fmt.Println(tableName)
+		}
+
+		if err := rows.Err(); err != nil {
+			printError("Error iterating tables: %v", err)
 		}
 	} else {
-		fmt.Println(
-			styles.Title.Render(fmt.Sprintf("Tables in %s", conn.GetName())),
-		)
-		fmt.Println()
-		for i, table := range tables {
-			fmt.Printf("%s %s\n",
-				styles.Faint.Render(fmt.Sprintf("%d.", i+1)),
-				styles.Title.Render(table),
-			)
+		// For normal mode, use the interactive table viewer with name-only query
+		a.showTablesInteractive(conn, nameOnlyQuery)
+	}
+}
+
+func (a *App) showTablesInteractive(
+	conn db.DatabaseConnection,
+	queryStr string,
+) {
+	for {
+		start := time.Now()
+		done := make(chan struct{})
+		go spinner.CircleWaitWithTimer(done)
+
+		rows, err := conn.ExecQuery(queryStr)
+		if err != nil {
+			done <- struct{}{}
+			printError("Could not retrieve tables: %v", err)
 		}
-		fmt.Println()
-		fmt.Println(
-			styles.Faint.Render(fmt.Sprintf("Total: %d tables", len(tables))),
+
+		columns, data, err := db.FormatTableData(rows)
+		if err != nil {
+			done <- struct{}{}
+			printError("Could not format table data: %v", err)
+		}
+
+		done <- struct{}{}
+		elapsed := time.Since(start)
+
+		if len(data) == 0 {
+			fmt.Println("No tables found")
+			return
+		}
+
+		q := db.Query{
+			Name: "tables",
+			SQL:  queryStr,
+		}
+
+		model, err := table.RenderTablesList(
+			columns,
+			data,
+			elapsed,
+			conn,
+			q,
+			a.config.DefaultColumnWidth,
 		)
-		fmt.Println()
-		fmt.Println(
-			styles.Faint.Render(
-				"Run 'pam tables <table-name>' to query a table",
-			),
-		)
+		if err != nil {
+			printError("Error rendering tables: %v", err)
+		}
+
+		// Check if user selected a table
+		selectedTable := model.GetSelectedTableName()
+		if selectedTable != "" {
+			// User pressed Enter on a table - query it
+			query := db.Query{
+				Name:      selectedTable,
+				SQL:       fmt.Sprintf("SELECT * FROM %s", selectedTable),
+				TableName: selectedTable,
+				Id:        -1,
+			}
+
+			// Try to get primary key from table metadata
+			if metadata, err := conn.GetTableMetadata(
+				selectedTable,
+			); err == nil &&
+				metadata != nil {
+				query.PrimaryKey = metadata.PrimaryKey
+			}
+
+			a.executeSelect(
+				query.SQL,
+				query.Name,
+				conn,
+				&query,
+				false,
+				func(editedSQL string) {
+					editedQuery := db.Query{
+						Name:      selectedTable,
+						SQL:       editedSQL,
+						TableName: selectedTable,
+						Id:        -1,
+					}
+					a.executeSelect(
+						editedSQL,
+						selectedTable,
+						conn,
+						&editedQuery,
+						true,
+						nil,
+					)
+				},
+			)
+			// After returning from table view, go back to tables list
+			continue
+		}
+
+		// Check if user wants to re-run (edited the query)
+		if model.ShouldRerunQuery() {
+			queryStr = model.GetEditedQuery().SQL
+			continue
+		}
+
+		// User quit without selecting anything
+		break
 	}
 }
