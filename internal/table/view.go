@@ -14,6 +14,11 @@ func (m Model) View() string {
 		return "Loading..."
 	}
 
+	// Se estiver no modo de visualização detalhada, mostrar a view detalhada
+	if m.detailViewMode {
+		return m.renderDetailView()
+	}
+
 	var b strings.Builder
 
 	// Display query name header
@@ -75,7 +80,8 @@ func (m Model) renderHeader() string {
 		}
 
 		pkIcon := ""
-		if m.primaryKeyCol != "" && j < len(m.columns) && m.columns[j] == m.primaryKeyCol {
+		if m.primaryKeyCol != "" && j < len(m.columns) &&
+			m.columns[j] == m.primaryKeyCol {
 			pkIcon = "⚿ "
 		}
 
@@ -127,10 +133,18 @@ func (m Model) renderFooter() string {
 	delInfo := ""
 
 	if m.tableName != "" && m.primaryKeyCol != "" {
-		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate")
+		updateInfo = styles.TableHeader.Render(
+			"u",
+		) + styles.Faint.Render(
+			"pdate",
+		)
 		delInfo = styles.TableHeader.Render("D") + styles.Faint.Render("el")
 	} else if m.tableName != "" {
-		updateInfo = styles.TableHeader.Render("u") + styles.Faint.Render("pdate (no PK)")
+		updateInfo = styles.TableHeader.Render(
+			"u",
+		) + styles.Faint.Render(
+			"pdate (no PK)",
+		)
 		delInfo = ""
 	} else {
 		// No table name means JOIN or complex query
@@ -145,12 +159,22 @@ func (m Model) renderFooter() string {
 	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
 
 	var footer string
-	footer = fmt.Sprintf("\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+	footer = fmt.Sprintf(
+		"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
 		cellPreview,
 		styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
 		styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-		styles.Faint.Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
-		updateInfo, delInfo, yank, sel, edit, quit, hjkl)
+		styles.Faint.Render(
+			fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
+		),
+		updateInfo,
+		delInfo,
+		yank,
+		sel,
+		edit,
+		quit,
+		hjkl,
+	)
 
 	return footer
 }
@@ -192,21 +216,30 @@ func getTypeIcon(typeName string) string {
 	// String/Text types
 	if strings.Contains(upper, "CHAR") || strings.Contains(upper, "TEXT") ||
 		strings.Contains(upper, "STRING") || strings.Contains(upper, "CLOB") ||
-		strings.Contains(upper, "VARCHAR") || strings.Contains(upper, "NVARCHAR") {
+		strings.Contains(
+			upper,
+			"VARCHAR",
+		) || strings.Contains(upper, "NVARCHAR") {
 		return "α"
 	}
 
 	// Integer types
 	if strings.Contains(upper, "INT") || strings.Contains(upper, "SERIAL") ||
-		strings.Contains(upper, "BIGINT") || strings.Contains(upper, "SMALLINT") ||
+		strings.Contains(
+			upper,
+			"BIGINT",
+		) || strings.Contains(upper, "SMALLINT") ||
 		strings.Contains(upper, "TINYINT") {
 		return "№"
 	}
 
 	// Decimal/Float types
-	if strings.Contains(upper, "DECIMAL") || strings.Contains(upper, "NUMERIC") ||
-		strings.Contains(upper, "FLOAT") || strings.Contains(upper, "DOUBLE") ||
-		strings.Contains(upper, "REAL") || strings.Contains(upper, "NUMBER") ||
+	if strings.Contains(upper, "DECIMAL") ||
+		strings.Contains(upper, "NUMERIC") ||
+		strings.Contains(upper, "FLOAT") ||
+		strings.Contains(upper, "DOUBLE") ||
+		strings.Contains(upper, "REAL") ||
+		strings.Contains(upper, "NUMBER") ||
 		strings.Contains(upper, "MONEY") {
 		return "≈"
 	}
@@ -229,7 +262,10 @@ func getTypeIcon(typeName string) string {
 	// Binary/Blob types
 	if strings.Contains(upper, "BLOB") || strings.Contains(upper, "BINARY") ||
 		strings.Contains(upper, "BYTEA") || strings.Contains(upper, "RAW") ||
-		strings.Contains(upper, "VARBINARY") || strings.Contains(upper, "IMAGE") {
+		strings.Contains(
+			upper,
+			"VARBINARY",
+		) || strings.Contains(upper, "IMAGE") {
 		return "◆"
 	}
 
@@ -259,11 +295,133 @@ func getTypeIcon(typeName string) string {
 	}
 
 	// Geometric/Spatial types
-	if strings.Contains(upper, "GEOMETRY") || strings.Contains(upper, "POINT") ||
-		strings.Contains(upper, "POLYGON") || strings.Contains(upper, "LINE") {
+	if strings.Contains(upper, "GEOMETRY") ||
+		strings.Contains(upper, "POINT") ||
+		strings.Contains(upper, "POLYGON") ||
+		strings.Contains(upper, "LINE") {
 		return "◉"
 	}
 
 	// Default fallback
 	return "•"
+}
+
+func (m Model) renderDetailView() string {
+	var b strings.Builder
+
+	// Obter informações da célula selecionada
+	columnName := ""
+	columnType := ""
+	if m.selectedCol >= 0 && m.selectedCol < len(m.columns) {
+		columnName = m.columns[m.selectedCol]
+	}
+	if m.selectedCol >= 0 && m.selectedCol < len(m.columnTypes) {
+		columnType = m.columnTypes[m.selectedCol]
+	}
+
+	// Header
+	titleLine := fmt.Sprintf("◆ Cell Value - %s", columnName)
+	if columnType != "" {
+		titleLine += fmt.Sprintf(" (%s)", columnType)
+	}
+	b.WriteString(styles.Title.Render(titleLine))
+	b.WriteString("\n")
+
+	// Informação da posição
+	posInfo := fmt.Sprintf(
+		"Row %d, Column %d",
+		m.selectedRow+1,
+		m.selectedCol+1,
+	)
+	b.WriteString(styles.Faint.Render(posInfo))
+
+	// Mostrar se pode editar
+	if m.tableName != "" && m.primaryKeyCol != "" {
+		b.WriteString(" ")
+		b.WriteString(styles.Faint.Render("• Press 'e' to edit"))
+	}
+
+	b.WriteString("\n\n")
+
+	// Separator
+	separatorWidth := m.width - 4
+	if separatorWidth < 0 {
+		separatorWidth = 0
+	}
+	b.WriteString(styles.Separator.Render(strings.Repeat("─", separatorWidth)))
+	b.WriteString("\n\n")
+
+	// Conteúdo com scroll
+	lines := strings.Split(m.detailViewContent, "\n")
+	availableHeight := m.height - 10 // Reservar espaço para header e footer
+
+	if availableHeight < 5 {
+		availableHeight = 5
+	}
+
+	startLine := m.detailViewScroll
+	endLine := startLine + availableHeight
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
+	if startLine >= len(lines) {
+		startLine = 0
+		endLine = availableHeight
+		if endLine > len(lines) {
+			endLine = len(lines)
+		}
+	}
+
+	// Renderizar as linhas visíveis
+	for i := startLine; i < endLine; i++ {
+		line := lines[i]
+		// Truncar linha se for muito longa
+		if len(line) > m.width-4 {
+			line = line[:m.width-7] + "..."
+		}
+		b.WriteString(styles.TableCell.Render(line))
+		b.WriteString("\n")
+	}
+
+	// Padding se necessário
+	renderedLines := endLine - startLine
+	for i := renderedLines; i < availableHeight; i++ {
+		b.WriteString("\n")
+	}
+
+	// Separator
+	b.WriteString("\n")
+	b.WriteString(styles.Separator.Render(strings.Repeat("─", separatorWidth)))
+	b.WriteString("\n")
+
+	// Footer com instruções
+	scrollInfo := ""
+	if len(lines) > availableHeight {
+		scrollInfo = styles.Faint.Render(
+			fmt.Sprintf(
+				"[%d-%d of %d lines] ",
+				startLine+1,
+				endLine,
+				len(lines),
+			),
+		)
+	}
+
+	hjkl := styles.TableHeader.Render("↑↓") + styles.Faint.Render(" scroll")
+
+	edit := ""
+	if m.tableName != "" && m.primaryKeyCol != "" {
+		edit = styles.TableHeader.Render("e") + styles.Faint.Render(" edit  ")
+	}
+
+	quit := styles.TableHeader.Render(
+		"q/esc/enter",
+	) + styles.Faint.Render(
+		" close",
+	)
+
+	footer := fmt.Sprintf("\n%s%s  %s%s", scrollInfo, hjkl, edit, quit)
+	b.WriteString(footer)
+
+	return b.String()
 }

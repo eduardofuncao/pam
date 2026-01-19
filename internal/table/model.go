@@ -10,56 +10,67 @@ import (
 )
 
 type Model struct {
-	width            int
-	height           int
-	selectedRow      int
-	selectedCol      int
-	offsetX          int
-	offsetY          int
-	visibleCols      int
-	visibleRows      int
-	columns          []string
-	columnTypes      []string
-	data             [][]string
-	elapsed          time.Duration
-	blinkCopiedCell  bool
-	visualMode       bool
-	visualStartRow   int
-	visualStartCol   int
-	dbConnection     db.DatabaseConnection
-	tableName        string
-	primaryKeyCol    string
-	blinkUpdatedCell bool
-	updatedRow       int
-	updatedCol       int
-	blinkDeletedRow  bool
-	deletedRow       int
-	currentQuery     db.Query
-	shouldRerunQuery bool
-	editedQuery      string
+	width             int
+	height            int
+	selectedRow       int
+	selectedCol       int
+	offsetX           int
+	offsetY           int
+	visibleCols       int
+	visibleRows       int
+	columns           []string
+	columnTypes       []string
+	data              [][]string
+	elapsed           time.Duration
+	blinkCopiedCell   bool
+	visualMode        bool
+	visualStartRow    int
+	visualStartCol    int
+	dbConnection      db.DatabaseConnection
+	tableName         string
+	primaryKeyCol     string
+	blinkUpdatedCell  bool
+	updatedRow        int
+	updatedCol        int
+	blinkDeletedRow   bool
+	deletedRow        int
+	currentQuery      db.Query
+	shouldRerunQuery  bool
+	editedQuery       string
 	lastExecutedQuery string
-	cellWidth        int
+	cellWidth         int
+	detailViewMode    bool
+	detailViewContent string
+	detailViewScroll  int
 }
 
 type blinkMsg struct{}
 
-func New(columns []string, data [][]string, elapsed time.Duration, conn db.DatabaseConnection, tableName, primaryKeyCol string, query db.Query, columnWidth int) Model {
+func New(
+	columns []string,
+	data [][]string,
+	elapsed time.Duration,
+	conn db.DatabaseConnection,
+	tableName, primaryKeyCol string,
+	query db.Query,
+	columnWidth int,
+) Model {
 	columnTypes := make([]string, len(columns))
 	if tableName != "" && conn != nil {
 		metadata, err := conn.GetTableMetadata(tableName)
 
 		if err == nil && metadata != nil {
-				colTypeMap := map[string]string{}
-				for i, colName := range metadata.Columns {
-						if i < len(metadata.ColumnTypes) {
-								colTypeMap[colName] = metadata.ColumnTypes[i]
-						}
+			colTypeMap := map[string]string{}
+			for i, colName := range metadata.Columns {
+				if i < len(metadata.ColumnTypes) {
+					colTypeMap[colName] = metadata.ColumnTypes[i]
 				}
-				for i, col := range columns {
-						if t, ok := colTypeMap[col]; ok {
-								columnTypes[i] = t
-						}
+			}
+			for i, col := range columns {
+				if t, ok := colTypeMap[col]; ok {
+					columnTypes[i] = t
 				}
+			}
 		}
 	}
 
@@ -92,7 +103,7 @@ func (m Model) numRows() int {
 }
 
 func (m Model) numCols() int {
-	return len(m. columns)
+	return len(m.columns)
 }
 
 func (m Model) ShouldRerunQuery() bool {
@@ -109,16 +120,16 @@ func (m Model) GetEditedQuery() db.Query {
 
 func (m Model) calculateHeaderLines() int {
 	titleLines := 1
-	
+
 	var queryToDisplay string
 	if m.lastExecutedQuery != "" {
 		queryToDisplay = m.lastExecutedQuery
 	} else {
-		queryToDisplay = m.currentQuery. SQL
+		queryToDisplay = m.currentQuery.SQL
 	}
-	
+
 	formattedSQL := parser.FormatSQLWithLineBreaks(queryToDisplay)
 	sqlLines := strings.Count(formattedSQL, "\n") + 1
-	
+
 	return titleLines + sqlLines + 1
 }

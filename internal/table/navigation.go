@@ -1,7 +1,10 @@
 package table
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -97,12 +100,12 @@ func (m Model) pageDown() Model {
 
 func (m Model) toggleVisualMode() (Model, tea.Cmd) {
 	m.visualMode = !m.visualMode
-	
+
 	if m.visualMode {
 		m.visualStartRow = m.selectedRow
 		m.visualStartCol = m.selectedCol
 	}
-	
+
 	return m, nil
 }
 
@@ -110,13 +113,13 @@ func (m Model) getSelectionBounds() (minRow, maxRow, minCol, maxCol int) {
 	if !m.visualMode {
 		return m.selectedRow, m.selectedRow, m.selectedCol, m.selectedCol
 	}
-	
+
 	// Multi-cell selection
 	minRow = min(m.visualStartRow, m.selectedRow)
 	maxRow = max(m.visualStartRow, m.selectedRow)
 	minCol = min(m.visualStartCol, m.selectedCol)
 	maxCol = max(m.visualStartCol, m.selectedCol)
-	
+
 	return
 }
 
@@ -127,9 +130,9 @@ func (m Model) isCellInSelection(row, col int) bool {
 
 func (m Model) copySelection() (Model, tea.Cmd) {
 	minRow, maxRow, minCol, maxCol := m.getSelectionBounds()
-	
+
 	var allRows [][]string
-	
+
 	if m.visualMode {
 		headerRow := make([]string, 0)
 		for col := minCol; col <= maxCol; col++ {
@@ -137,7 +140,7 @@ func (m Model) copySelection() (Model, tea.Cmd) {
 		}
 		allRows = append(allRows, headerRow)
 	}
-	
+
 	for row := minRow; row <= maxRow; row++ {
 		dataRow := make([]string, 0)
 		for col := minCol; col <= maxCol; col++ {
@@ -145,10 +148,10 @@ func (m Model) copySelection() (Model, tea.Cmd) {
 		}
 		allRows = append(allRows, dataRow)
 	}
-	
+
 	numCols := maxCol - minCol + 1
 	colWidths := make([]int, numCols)
-	
+
 	for _, row := range allRows {
 		for i, cell := range row {
 			if len(cell) > colWidths[i] {
@@ -156,32 +159,227 @@ func (m Model) copySelection() (Model, tea.Cmd) {
 			}
 		}
 	}
-	
+
 	var result strings.Builder
-	
+
 	for rowIdx, row := range allRows {
 		for colIdx, cell := range row {
 			paddedCell := fmt.Sprintf("%-*s", colWidths[colIdx], cell)
 			result.WriteString(paddedCell)
-			
+
 			if colIdx < len(row)-1 {
 				result.WriteString("  ")
 			}
 		}
-		
+
 		if rowIdx < len(allRows)-1 {
 			result.WriteString("\n")
 		}
 	}
-	
+
 	content := result.String()
 	clipboard.WriteAll(content)
-	
+
 	m.visualMode = false
 	m.blinkCopiedCell = true
-	
+
 	return m, func() tea.Msg {
 		time.Sleep(200 * time.Millisecond)
 		return blinkMsg{}
 	}
+}
+
+func (m Model) showDetailView() Model {
+	if m.selectedRow < 0 || m.selectedRow >= len(m.data) ||
+		m.selectedCol < 0 || m.selectedCol >= len(m.data[m.selectedRow]) {
+		return m
+	}
+
+	cellValue := m.data[m.selectedRow][m.selectedCol]
+
+	// Tentar formatar como JSON
+	formattedValue := formatValueIfJSON(cellValue)
+
+	m.detailViewMode = true
+	m.detailViewContent = formattedValue
+	m.detailViewScroll = 0
+
+	return m
+}
+
+func (m Model) editFromDetailView() (Model, tea.Cmd) {
+	if m.selectedRow < 0 || m.selectedRow >= len(m.data) ||
+		m.selectedCol < 0 || m.selectedCol >= len(m.data[m.selectedRow]) {
+		return m, nil
+	}
+
+	// Verificar se pode editar (precisa de tableName e primaryKey)
+	if m.tableName == "" {
+		return m, nil
+	}
+
+	cellValue := m.data[m.selectedRow][m.selectedCol]
+
+	// Se o conteúdo está formatado (JSON), usar o valor formatado
+	contentToEdit := cellValue
+	if m.detailViewContent != cellValue {
+		// Está formatado, usar o conteúdo formatado
+		contentToEdit = m.detailViewContent
+	}
+
+	editorCmd := os.Getenv("EDITOR")
+	if editorCmd == "" {
+		editorCmd = "vim"
+	}
+
+	tmpFile, err := os.CreateTemp("", "pam-edit-cell-*.txt")
+	if err != nil {
+		return m, nil
+	}
+	tmpPath := tmpFile.Name()
+
+	// Escrever o conteúdo atual no arquivo temporário
+	if _, err := tmpFile.Write([]byte(contentToEdit)); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return m, nil
+	}
+	tmpFile.Close()
+
+	cmd := buildEditorCommandForDetailView(editorCmd, tmpPath)
+
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		editedContent, readErr := os.ReadFile(tmpPath)
+		os.Remove(tmpPath)
+
+		if err != nil || readErr != nil {
+			return nil
+		}
+
+		return detailViewEditCompleteMsg{
+			newValue: string(editedContent),
+			colIndex: m.selectedCol,
+		}
+	})
+}
+
+type detailViewEditCompleteMsg struct {
+	newValue string
+	colIndex int
+}
+
+func (m Model) handleDetailViewEditComplete(
+	msg detailViewEditCompleteMsg,
+) (tea.Model, tea.Cmd) {
+	// Validar JSON se o conteúdo original era JSON
+	trimmed := strings.TrimSpace(msg.newValue)
+	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+		var jsonData interface{}
+		if err := json.Unmarshal([]byte(trimmed), &jsonData); err != nil {
+			// JSON inválido, não atualizar
+			printError("Invalid JSON: %v", err)
+			m.detailViewMode = false
+			return m, nil
+		}
+		// Compactar JSON para salvar no banco
+		compacted, err := json.Marshal(jsonData)
+		if err == nil {
+			msg.newValue = string(compacted)
+		}
+	}
+
+	// Construir UPDATE statement
+	columnName := m.columns[m.selectedCol]
+	pkValue := ""
+	if m.primaryKeyCol != "" {
+		for i, col := range m.columns {
+			if col == m.primaryKeyCol {
+				pkValue = m.data[m.selectedRow][i]
+				break
+			}
+		}
+	}
+
+	updateStmt := m.dbConnection.BuildUpdateStatement(
+		m.tableName,
+		columnName,
+		msg.newValue,
+		m.primaryKeyCol,
+		pkValue,
+	)
+
+	// Executar update
+	if err := m.executeUpdate(updateStmt); err != nil {
+		printError("Could not execute update: %v", err)
+		m.detailViewMode = false
+		return m, nil
+	}
+
+	// Atualizar dados locais
+	m.data[m.selectedRow][m.selectedCol] = msg.newValue
+
+	// Fechar detail view e voltar para tabela com célula destacada
+	m.detailViewMode = false
+	m.blinkUpdatedCell = true
+	m.updatedRow = m.selectedRow
+	m.updatedCol = m.selectedCol
+
+	return m, tea.Batch(
+		tea.ClearScreen,
+		m.blinkCmd(),
+	)
+}
+
+func (m Model) closeDetailView() Model {
+	m.detailViewMode = false
+	m.detailViewContent = ""
+	m.detailViewScroll = 0
+	return m
+}
+
+func (m Model) scrollDetailViewUp() Model {
+	if m.detailViewScroll > 0 {
+		m.detailViewScroll--
+	}
+	return m
+}
+
+func (m Model) scrollDetailViewDown() Model {
+	lines := strings.Count(m.detailViewContent, "\n") + 1
+	maxScroll := lines - (m.height - 10) // Reservar espaço para header e footer
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if m.detailViewScroll < maxScroll {
+		m.detailViewScroll++
+	}
+	return m
+}
+
+func formatValueIfJSON(value string) string {
+	trimmed := strings.TrimSpace(value)
+
+	// Verificar se parece ser JSON
+	if !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "[") {
+		return value
+	}
+
+	// Tentar fazer parse do JSON
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(trimmed), &jsonData); err != nil {
+		// Não é JSON válido, retornar valor original
+		return value
+	}
+
+	// Formatar JSON com indentação
+	formatted, err := json.MarshalIndent(jsonData, "", "  ")
+	if err != nil {
+		return value
+	}
+
+	return string(formatted)
+}
+
+func buildEditorCommandForDetailView(editorCmd, tmpPath string) *exec.Cmd {
+	return exec.Command(editorCmd, tmpPath)
 }
