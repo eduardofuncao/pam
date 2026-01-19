@@ -50,6 +50,8 @@ func (a *App) Run() {
 		a.handleEdit()
 	case "info":
 		a.handleInfo()
+	case "explore":
+		a.handleExplore()
 	case "status", "test":
 		a.handleStatus()
 	case "history":
