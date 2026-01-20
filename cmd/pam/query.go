@@ -16,9 +16,9 @@ import (
 )
 
 type queryFlags struct {
-	editMode bool
-	newQuery bool
-	selector string
+	editMode  bool
+	lastQuery bool
+	selector  string
 }
 
 type resolvedQuery struct {
@@ -36,7 +36,7 @@ func (a *App) handleQuery() {
 
 	resolved := a.resolveQuery(flags, conn)
 
-	if flags.editMode && !flags.newQuery {
+	if flags.editMode && !flags.lastQuery {
 		resolved.query = a.editQueryOrExit(resolved.query)
 	}
 
@@ -50,8 +50,8 @@ func parseQueryFlags() queryFlags {
 		switch arg {
 		case "--edit", "-e":
 			flags.editMode = true
-		case "--new", "-n":
-			flags.newQuery = true
+		case "--last", "-l":
+			flags.lastQuery = true
 		default:
 			flags.selector = arg
 		}
@@ -60,15 +60,19 @@ func parseQueryFlags() queryFlags {
 }
 
 func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolvedQuery {
-	// Priority 1: New query in editor witm pam run --new
-	if flags.newQuery {
+	// Priority 1: Last query with --last/-l flag
+	if flags.lastQuery {
+		lastQuery := a.config.Connections[a.config.CurrentConnection].LastQuery
+		if lastQuery.Name == "" {
+			printError("No last query found. Run a query first, then use pam run --last")
+		}
 		return resolvedQuery{
-			query:    a.createNewQueryOrExit(),
-			saveable: false,
+			query:    lastQuery,
+			saveable: true,
 		}
 	}
 
-	// Priority 2: Inline SQL (pam run "select * from employees""
+	// Priority 2: Inline SQL (pam run "select * from employees")
 	if flags.selector != "" && isLikelySQL(flags.selector) {
 		return resolvedQuery{
 			query:    db.Query{Name: "<inline>", SQL: flags.selector, Id: -1},
@@ -88,19 +92,19 @@ func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolve
 		}
 	}
 
-	// Priority 4: Last run query
-	lastQuery := a.config.Connections[a.config.CurrentConnection].LastQuery
-	if lastQuery.Name == "" {
-		printError("No last query found.  Usage: pam run <query-name|sql> or pam run -n")
-	}
+	//  Default - create new query in editor (pam run with no args)
 	return resolvedQuery{
-		query:    lastQuery,
-		saveable: true,
+		query:    a.createNewQueryOrExit(),
+		saveable: false,
 	}
 }
 
 func (a *App) createNewQueryOrExit() db.Query {
-	query := db.Query{Name: "<runtime>", SQL: "", Id: -1}
+	instructions := `-- Enter your SQL query below
+-- Save and exit to execute, or exit without saving to cancel
+--
+`
+	query := db.Query{Name: "<runtime>", SQL: instructions, Id: -1}
 	edited, err := a.openExternalEditor(query)
 	if err != nil {
 		printError("Error opening editor: %v", err)
@@ -166,6 +170,22 @@ func (a *App) openExternalEditor(query db.Query) (db.Query, error) {
 	}
 
 	editedSQL := strings.TrimSpace(string(editedData))
+
+	// Strip instructions if present (for new queries)
+	if strings.HasPrefix(editedSQL, "-- Enter your SQL query below") {
+		lines := strings.Split(editedSQL, "\n")
+		var sqlLines []string
+		foundSeparator := false
+		for _, line := range lines {
+			if foundSeparator {
+				sqlLines = append(sqlLines, line)
+			} else if line == "--" {
+				foundSeparator = true
+			}
+		}
+		editedSQL = strings.TrimSpace(strings.Join(sqlLines, "\n"))
+	}
+
 	if editedSQL == "" {
 		return db.Query{}, fmt.Errorf("empty query")
 	}
@@ -248,7 +268,7 @@ func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, q
 	}
 
 	// Render the TUI
-	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, q, a.config.DefaultColumnWidth)
+	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, q, a.config.DefaultColumnWidth, a.saveQueryFromTable)
 	if err != nil {
 		printError("Error rendering table: %v", err)
 	}
@@ -319,4 +339,41 @@ func isLikelySQL(s string) bool {
 		}
 	}
 	return false
+}
+
+func (a *App) saveQueryFromTable(query db.Query) (db.Query, error) {
+	connName := a.config.CurrentConnection
+	if connName == "" {
+		return db.Query{}, fmt.Errorf("no active connection")
+	}
+
+	connData := a.config.Connections[connName]
+
+	// Check if query with this name already exists (and we're creating new)
+	if query.Id == -1 {
+		if _, exists := connData.Queries[query.Name]; exists {
+			return db.Query{}, fmt.Errorf("query '%s' already exists", query.Name)
+		}
+		// Get next ID
+		maxID := 0
+		for _, q := range connData.Queries {
+			if q.Id > maxID {
+				maxID = q.Id
+			}
+		}
+		query.Id = maxID + 1
+	}
+
+	// Save the query
+	connData.Queries[query.Name] = query
+
+	// Update last query
+	connData.LastQuery = query
+
+	// Save config
+	if err := a.config.Save(); err != nil {
+		return db.Query{}, err
+	}
+
+	return query, nil
 }

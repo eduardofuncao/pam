@@ -45,6 +45,8 @@ type Model struct {
 	isTablesList      bool
 	onTableSelect     func(string) tea.Cmd
 	selectedTableName string
+	saveQueryCallback func(query db.Query) (db.Query, error)
+	statusMessage    string
 }
 
 type blinkMsg struct{}

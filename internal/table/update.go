@@ -12,6 +12,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.blinkCopiedCell = false
 		m.blinkUpdatedCell = false
 		m.blinkDeletedRow = false
+		m.statusMessage = ""
 	case editorCompleteMsg:
 		return m.handleEditorComplete(msg)
 	case deleteCompleteMsg:
@@ -20,6 +21,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleQueryEditComplete(msg)
 	case detailViewEditCompleteMsg:
 		return m.handleDetailViewEditComplete(msg)
+	case saveQueryCompleteMsg:
+		return m.handleSaveQueryComplete(msg)
 	case tea.WindowSizeMsg:
 		return m.handleWindowResize(msg), nil
 	}
@@ -104,6 +107,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.deleteRow()
 	case "e":
 		return m.editAndRerunQuery()
+	case "s":
+		return m.saveQuery()
 	}
 
 	return m, nil

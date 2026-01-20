@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -32,8 +33,8 @@ func (m Model) deleteRow() (tea.Model, tea.Cmd) {
 	tmpPath := tmpFile.Name()
 
 	header := `-- DELETE Statement
--- WARNING: This will permanently delete data! 
--- To cancel, delete all content and save. 
+-- WARNING: This will permanently delete data!
+-- To cancel, exit without saving (e.g., :q! in vim)
 --
 `
 	content := header + deleteStmt
@@ -45,41 +46,78 @@ func (m Model) deleteRow() (tea.Model, tea.Cmd) {
 	}
 	tmpFile.Close()
 
+	// Get file modification time before editor
+	beforeModTime, err := os.Stat(tmpPath)
+	if err != nil {
+		os.Remove(tmpPath)
+		return m, nil
+	}
+
 	rowToDelete := m.selectedRow
 
 	// Build command with cursor at WHERE clause
 	cmd := buildEditorCommand(editorCmd, tmpPath, content, CursorAtWhereClause)
-	
-	return m, tea. ExecProcess(cmd, func(err error) tea.Msg {
+
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		// Check if file was modified
+		afterModTime, statErr := os.Stat(tmpPath)
+		if statErr != nil {
+			os.Remove(tmpPath)
+			return nil
+		}
+
+		// If file wasn't modified, user cancelled (exited without saving)
+		if afterModTime.ModTime().Equal(beforeModTime.ModTime()) || afterModTime.ModTime().Before(beforeModTime.ModTime()) {
+			os.Remove(tmpPath)
+			// Return a message that will show "cancelled" status
+			return deleteCompleteMsg{
+				sql:       "",
+				rowIndex:  rowToDelete,
+				cancelled: true,
+			}
+		}
+
 		editedSQL, readErr := os.ReadFile(tmpPath)
 		os.Remove(tmpPath)
-		
+
 		if err != nil || readErr != nil {
 			return nil
 		}
 
 		return deleteCompleteMsg{
-			sql:      string(editedSQL),
-			rowIndex: rowToDelete,
+			sql:       string(editedSQL),
+			rowIndex:  rowToDelete,
+			cancelled: false,
 		}
 	})
 }
 
 // Message sent when delete editor completes
 type deleteCompleteMsg struct {
-	sql      string
-	rowIndex int
+	sql       string
+	rowIndex  int
+	cancelled bool
 }
 
 func (m Model) handleDeleteComplete(msg deleteCompleteMsg) (tea.Model, tea.Cmd) {
+	// If user cancelled (exited without saving)
+	if msg.cancelled {
+		m.statusMessage = "Delete cancelled"
+		return m, tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+			return blinkMsg{}
+		})
+	}
+
 	if err := validateDeleteStatement(msg.sql); err != nil {
 		printError("Delete validation failed: %v", err)
+		return m, nil
 	}
 
 	m.lastExecutedQuery = m.cleanSQLForDisplay(msg.sql)
 
 	if err := m.executeDelete(msg.sql); err != nil {
 		printError("Could not execute delete: %v", err)
+		return m, nil
 	}
 
 	// Successfully deleted - update the model data

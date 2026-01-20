@@ -37,9 +37,34 @@ func (m Model) updateCell() (tea.Model, tea.Cmd) {
 	}
 	tmpFile.Close()
 
+	// Get file modification time before editor
+	beforeModTime, err := os.Stat(tmpPath)
+	if err != nil {
+		os.Remove(tmpPath)
+		return m, nil
+	}
+
 	cmd := buildEditorCommand(editorCmd, tmpPath, updateStmt, CursorAtUpdateValue)
 
 	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		// Check if file was modified
+		afterModTime, statErr := os.Stat(tmpPath)
+		if statErr != nil {
+			os.Remove(tmpPath)
+			return nil
+		}
+
+		// If file wasn't modified, user cancelled (exited without saving)
+		if afterModTime.ModTime().Equal(beforeModTime.ModTime()) || afterModTime.ModTime().Before(beforeModTime.ModTime()) {
+			os.Remove(tmpPath)
+			// Return a message that will show "cancelled" status
+			return editorCompleteMsg{
+				sql:      "",
+				colIndex: m.selectedCol,
+				cancelled: true,
+			}
+		}
+
 		editedSQL, readErr := os.ReadFile(tmpPath)
 		os.Remove(tmpPath)
 
@@ -49,16 +74,26 @@ func (m Model) updateCell() (tea.Model, tea.Cmd) {
 		return editorCompleteMsg{
 			sql:      string(editedSQL),
 			colIndex: m.selectedCol,
+			cancelled: false,
 		}
 	})
 }
 
 type editorCompleteMsg struct {
-	sql      string
-	colIndex int
+	sql       string
+	colIndex  int
+	cancelled bool
 }
 
 func (m Model) handleEditorComplete(msg editorCompleteMsg) (tea.Model, tea.Cmd) {
+	// If user cancelled (exited without saving)
+	if msg.cancelled {
+		m.statusMessage = "Update cancelled"
+		return m, tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+			return blinkMsg{}
+		})
+	}
+
 	if err := validateUpdateStatement(msg.sql); err != nil {
 		printError("Update validation failed:  %v", err)
 		return m, nil
