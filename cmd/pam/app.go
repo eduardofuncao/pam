@@ -56,6 +56,10 @@ func (a *App) Run() {
 		a.handleStatus()
 	case "history":
 		a.handleHistory()
+	case "tables", "t":
+		a.handleTables()
+	case "disconnect", "clear", "unset":
+		a.handleDisconnect()
 	case "help":
 		a.handleHelp()
 	default:
@@ -69,20 +73,55 @@ func (a *App) printUsage() {
 	fmt.Println()
 
 	fmt.Println(styles.Title.Render("Quick Start"))
-	fmt.Println("  1. Create a connection: " + styles.Faint.Render("pam init <name> <db-type> <connection-string>"))
-	fmt.Println("  2. Add a query: " + styles.Faint.Render("pam add <query-name> <sql>"))
+	fmt.Println(
+		"  1. Create a connection: " + styles.Faint.Render(
+			"pam init <name> <db-type> <connection-string>",
+		),
+	)
+	fmt.Println(
+		"  2. Add a query: " + styles.Faint.Render(
+			"pam add <query-name> <sql>",
+		),
+	)
 	fmt.Println("  3. Run it: " + styles.Faint.Render("pam run <query-name>"))
 	fmt.Println()
 
 	fmt.Println(styles.Title.Render("Common Commands"))
-	fmt.Println("  pam run <query>      " + styles.Faint.Render("Execute a saved query"))
-	fmt.Println("  pam list queries     " + styles.Faint.Render("List saved queries"))
-	fmt.Println("  pam list connections " + styles.Faint.Render("List database connections"))
+	fmt.Println(
+		"  pam run <query>      " + styles.Faint.Render(
+			"Execute a saved query",
+		),
+	)
+	fmt.Println(
+		"  pam tables           " + styles.Faint.Render("List database tables"),
+	)
+	fmt.Println(
+		"  pam tables <table>   " + styles.Faint.Render(
+			"Query a table directly",
+		),
+	)
+	fmt.Println(
+		"  pam list queries     " + styles.Faint.Render("List saved queries"),
+	)
+	fmt.Println(
+		"  pam list connections " + styles.Faint.Render(
+			"List database connections",
+		),
+	)
+	fmt.Println(
+		"  pam disconnect       " + styles.Faint.Render(
+			"Disconnect from current database",
+		),
+	)
 	fmt.Println()
 
 	fmt.Println(styles.Title.Render("Help"))
-	fmt.Println("  pam help             " + styles.Faint.Render("Show all commands"))
-	fmt.Println("  pam help <command>   " + styles.Faint.Render("Show command details"))
+	fmt.Println(
+		"  pam help             " + styles.Faint.Render("Show all commands"),
+	)
+	fmt.Println(
+		"  pam help <command>   " + styles.Faint.Render("Show command details"),
+	)
 	fmt.Println()
 }
 

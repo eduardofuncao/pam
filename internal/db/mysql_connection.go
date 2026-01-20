@@ -34,7 +34,11 @@ func (m *MySQLConnection) Open() error {
 		_, err = m.db.Exec(setDatabaseSQL)
 		if err != nil {
 			m.db.Close()
-			return fmt.Errorf("failed to set database to '%s': %w", m.Schema, err)
+			return fmt.Errorf(
+				"failed to set database to '%s': %w",
+				m.Schema,
+				err,
+			)
 		}
 	}
 
@@ -49,7 +53,7 @@ func (m *MySQLConnection) Ping() error {
 }
 
 func (m *MySQLConnection) Close() error {
-	if m. db != nil {
+	if m.db != nil {
 		return m.db.Close()
 	}
 	return nil
@@ -60,10 +64,13 @@ func (m *MySQLConnection) Query(queryName string, args ...any) (any, error) {
 	if !exists {
 		return nil, fmt.Errorf("query not found: %s", queryName)
 	}
-	return m.db.Query(query. SQL, args...)
+	return m.db.Query(query.SQL, args...)
 }
 
-func (m *MySQLConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+func (m *MySQLConnection) ExecQuery(
+	sql string,
+	args ...any,
+) (*sql.Rows, error) {
 	return m.db.Query(sql, args...)
 }
 
@@ -72,60 +79,97 @@ func (m *MySQLConnection) Exec(sql string, args ...any) error {
 	return err
 }
 
-func (m *MySQLConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
+func (m *MySQLConnection) GetTableMetadata(
+	tableName string,
+) (*TableMetadata, error) {
 	if m.db == nil {
 		return nil, fmt.Errorf("database is not open")
 	}
-	
+
 	pkQuery := `
 		SELECT COLUMN_NAME
-		FROM INFORMATION_SCHEMA. KEY_COLUMN_USAGE
-		WHERE TABLE_NAME = ?  
+		FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+		WHERE TABLE_NAME = ?
 		AND CONSTRAINT_NAME = 'PRIMARY'
 		AND TABLE_SCHEMA = DATABASE()
 		ORDER BY ORDINAL_POSITION
 		LIMIT 1
 	`
-	
+
 	rows, err := m.db.Query(pkQuery, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query mysql primary key: %w", err)
 	}
 	defer rows.Close()
-	
+
 	metadata := &TableMetadata{
 		TableName: tableName,
 	}
-	
-	if rows. Next() {
+
+	if rows.Next() {
 		var pkColumn string
-		if err := rows. Scan(&pkColumn); err == nil {
+		if err := rows.Scan(&pkColumn); err == nil {
 			metadata.PrimaryKey = pkColumn
 		}
 	}
-	
+
 	colQuery := `
 		SELECT COLUMN_NAME,
 		       COLUMN_TYPE
-		FROM INFORMATION_SCHEMA. COLUMNS
-		WHERE TABLE_NAME = ?  
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_NAME = ?
 		AND TABLE_SCHEMA = DATABASE()
 		ORDER BY ORDINAL_POSITION
 	`
-	
-	colRows, err := m.db. Query(colQuery, tableName)
+
+	colRows, err := m.db.Query(colQuery, tableName)
 	if err == nil {
 		defer colRows.Close()
 		for colRows.Next() {
 			var colName, colType string
 			if err := colRows.Scan(&colName, &colType); err == nil {
 				metadata.Columns = append(metadata.Columns, colName)
-				metadata.ColumnTypes = append(metadata.ColumnTypes, colType)  // ADD THIS
+				metadata.ColumnTypes = append(metadata.ColumnTypes, colType)
 			}
 		}
 	}
-	
+
 	return metadata, nil
+}
+
+func (m *MySQLConnection) GetTables() ([]string, error) {
+	if m.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	query := `
+		SELECT TABLE_NAME
+		FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_TYPE = 'BASE TABLE'
+		ORDER BY TABLE_NAME
+	`
+
+	rows, err := m.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			return nil, fmt.Errorf("failed to scan table name: %w", err)
+		}
+		tables = append(tables, tableName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating tables: %w", err)
+	}
+
+	return tables, nil
 }
 
 func (m *MySQLConnection) GetInfoSQL(infoType string) string {
@@ -139,12 +183,14 @@ func (m *MySQLConnection) GetInfoSQL(infoType string) string {
 	}
 }
 
-func (m *MySQLConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
-	escapedValue := strings. ReplaceAll(currentValue, "'", "''")
-	
+func (m *MySQLConnection) BuildUpdateStatement(
+	tableName, columnName, currentValue, pkColumn, pkValue string,
+) string {
+	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
+
 	if pkColumn != "" && pkValue != "" {
 		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
-		return fmt. Sprintf(
+		return fmt.Sprintf(
 			"-- MySQL UPDATE statement\nUPDATE %s\nSET %s = '%s'\nWHERE %s = '%s';",
 			tableName,
 			columnName,
@@ -153,7 +199,7 @@ func (m *MySQLConnection) BuildUpdateStatement(tableName, columnName, currentVal
 			escapedPkValue,
 		)
 	}
-	
+
 	return fmt.Sprintf(
 		"-- MySQL UPDATE statement\n-- No primary key specified. Edit WHERE clause manually.\nUPDATE `%s`\nSET `%s` = '%s'\nWHERE <condition>;",
 		tableName,
@@ -161,11 +207,14 @@ func (m *MySQLConnection) BuildUpdateStatement(tableName, columnName, currentVal
 		escapedValue,
 	)
 }
-func (m *MySQLConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkValue string) string {
+
+func (m *MySQLConnection) BuildDeleteStatement(
+	tableName, primaryKeyCol, pkValue string,
+) string {
 	escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
-	
+
 	return fmt.Sprintf(
-		"-- MySQL DELETE statement\n-- WARNING:  This will permanently delete data!\n-- Ensure the WHERE clause is correct.\n\nDELETE FROM %s\nWHERE %s = '%s';",
+		"-- MySQL DELETE statement\n-- WARNING: This will permanently delete data!\n-- Ensure the WHERE clause is correct.\n\nDELETE FROM %s\nWHERE %s = '%s';",
 		tableName,
 		primaryKeyCol,
 		escapedPkValue,

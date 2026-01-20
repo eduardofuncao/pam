@@ -33,15 +33,26 @@ func (b *BaseConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
 	return nil, errors.New("ExecQuery() not implemented for base connection")
 }
 func (b *BaseConnection) Exec(sql string, args ...any) error {
-	return errors. New("Exec() not implemented for base connection")
-}
-func (b *BaseConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
-	return nil, errors. New("GetTableMetadata() not implemented for base connection")
+	return errors.New("Exec() not implemented for base connection")
 }
 
-func (b *BaseConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
+func (b *BaseConnection) GetTableMetadata(
+	tableName string,
+) (*TableMetadata, error) {
+	return nil, errors.New(
+		"GetTableMetadata() not implemented for base connection",
+	)
+}
+
+func (b *BaseConnection) GetTables() ([]string, error) {
+	return nil, errors.New("GetTables() not implemented for base connection")
+}
+
+func (b *BaseConnection) BuildUpdateStatement(
+	tableName, columnName, currentValue, pkColumn, pkValue string,
+) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
-	
+
 	if pkColumn != "" && pkValue != "" {
 		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
 		return fmt.Sprintf(
@@ -53,7 +64,7 @@ func (b *BaseConnection) BuildUpdateStatement(tableName, columnName, currentValu
 			escapedPkValue,
 		)
 	}
-	
+
 	return fmt.Sprintf(
 		"-- No primary key specified. Edit WHERE clause manually.\nUPDATE %s\nSET %s = '%s'\nWHERE <condition>;",
 		tableName,
@@ -64,7 +75,8 @@ func (b *BaseConnection) BuildUpdateStatement(tableName, columnName, currentValu
 
 func (b *BaseConnection) ApplyRowLimit(sql string, limit int) string {
 	trimmedSQL := strings.ToUpper(strings.TrimSpace(sql))
-	if !strings.HasPrefix(trimmedSQL, "SELECT") && !strings.HasPrefix(trimmedSQL, "WITH") {
+	if !strings.HasPrefix(trimmedSQL, "SELECT") &&
+		!strings.HasPrefix(trimmedSQL, "WITH") {
 		return sql
 	}
 
@@ -78,12 +90,32 @@ func (b *BaseConnection) ApplyRowLimit(sql string, limit int) string {
 	return fmt.Sprintf("%s\nLIMIT %d", cleanSQL, limit)
 }
 
-func (b *BaseConnection) GetName() string                     { return b.Name }
-func (b *BaseConnection) GetDbType() string                   { return b.DbType }
-func (b *BaseConnection) GetConnString() string               { return b.ConnString }
-func (b *BaseConnection) GetLastQuery() Query                 { return b.LastQuery }
-func (b *BaseConnection) SetLastQuery(query Query)            { b.LastQuery = query }
-func (b *BaseConnection) GetQueries() map[string]Query        { return b.Queries }
-func (b *BaseConnection) SetQueries(queries map[string]Query) { b.Queries = queries }
-func (b *BaseConnection) GetSchema() string        { return b.Schema }
-func (b *BaseConnection) SetSchema(schema string)  { b.Schema = schema }
+func (b *BaseConnection) GetName() string { return b.Name }
+
+func (b *BaseConnection) GetDbType() string { return b.DbType }
+
+func (b *BaseConnection) GetConnString() string { return b.ConnString }
+
+func (b *BaseConnection) GetLastQuery() Query { return b.LastQuery }
+
+func (b *BaseConnection) SetLastQuery(
+	query Query,
+) {
+	b.LastQuery = query
+}
+
+func (b *BaseConnection) GetQueries() map[string]Query { return b.Queries }
+
+func (b *BaseConnection) SetQueries(
+	queries map[string]Query,
+) {
+	b.Queries = queries
+}
+
+func (b *BaseConnection) GetSchema() string { return b.Schema }
+
+func (b *BaseConnection) SetSchema(
+	schema string,
+) {
+	b.Schema = schema
+}

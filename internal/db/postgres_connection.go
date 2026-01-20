@@ -28,7 +28,7 @@ func (p *PostgresConnection) Open() error {
 		return err
 	}
 	p.db = db
-	
+
 	if p.Schema != "" {
 		setSchemaSQL := fmt.Sprintf("SET search_path TO %s", p.Schema)
 		_, err = p.db.Exec(setSchemaSQL)
@@ -37,7 +37,7 @@ func (p *PostgresConnection) Open() error {
 			return fmt.Errorf("failed to set schema to '%s': %w", p.Schema, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -63,20 +63,25 @@ func (p *PostgresConnection) Query(queryName string, args ...any) (any, error) {
 	return p.db.Query(query.SQL, args...)
 }
 
-func (p *PostgresConnection) ExecQuery(sql string, args ...any) (*sql.Rows, error) {
+func (p *PostgresConnection) ExecQuery(
+	sql string,
+	args ...any,
+) (*sql.Rows, error) {
 	return p.db.Query(sql, args...)
 }
 
 func (p *PostgresConnection) Exec(sql string, args ...any) error {
-	_, err := p.db. Exec(sql, args...)
+	_, err := p.db.Exec(sql, args...)
 	return err
 }
 
-func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
+func (p *PostgresConnection) GetTableMetadata(
+	tableName string,
+) (*TableMetadata, error) {
 	if p.db == nil {
 		return nil, fmt.Errorf("database is not open")
 	}
-	
+
 	var currentSchema string
 	schemaQuery := `SELECT current_schema()`
 	row := p.db.QueryRow(schemaQuery)
@@ -88,7 +93,7 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 			currentSchema = "public"
 		}
 	}
-	
+
 	pkQuery := `
 		SELECT a.attname
 		FROM pg_index i
@@ -101,30 +106,30 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 		ORDER BY a.attnum
 		LIMIT 1
 	`
-	
+
 	rows, err := p.db.Query(pkQuery, tableName, currentSchema)
 	if err != nil {
-		return nil, fmt. Errorf("failed to query postgres primary key: %w", err)
+		return nil, fmt.Errorf("failed to query postgres primary key: %w", err)
 	}
 	defer rows.Close()
-	
+
 	metadata := &TableMetadata{
 		TableName: tableName,
 	}
-	
+
 	if rows.Next() {
 		var pkColumn string
 		if err := rows.Scan(&pkColumn); err == nil {
 			metadata.PrimaryKey = pkColumn
 		}
 	}
-	
+
 	colQuery := `
-		SELECT column_name, 
-		       CASE 
-		           WHEN character_maximum_length IS NOT NULL 
+		SELECT column_name,
+		       CASE
+		           WHEN character_maximum_length IS NOT NULL
 		           THEN data_type || '(' || character_maximum_length || ')'
-		           WHEN numeric_precision IS NOT NULL 
+		           WHEN numeric_precision IS NOT NULL
 		           THEN data_type || '(' || numeric_precision || ',' || numeric_scale || ')'
 		           ELSE data_type
 		       END as full_type
@@ -133,10 +138,10 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 		AND table_schema = $2
 		ORDER BY ordinal_position
 	`
-	
-	colRows, err := p.db. Query(colQuery, tableName, currentSchema)
+
+	colRows, err := p.db.Query(colQuery, tableName, currentSchema)
 	if err == nil {
-		defer colRows. Close()
+		defer colRows.Close()
 		for colRows.Next() {
 			var colName, colType string
 			if err := colRows.Scan(&colName, &colType); err == nil {
@@ -145,8 +150,54 @@ func (p *PostgresConnection) GetTableMetadata(tableName string) (*TableMetadata,
 			}
 		}
 	}
-	
+
 	return metadata, nil
+}
+
+func (p *PostgresConnection) GetTables() ([]string, error) {
+	if p.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	var currentSchema string
+	schemaQuery := `SELECT current_schema()`
+	row := p.db.QueryRow(schemaQuery)
+	if err := row.Scan(&currentSchema); err != nil {
+		if p.Schema != "" {
+			currentSchema = p.Schema
+		} else {
+			currentSchema = "public"
+		}
+	}
+
+	query := `
+		SELECT table_name
+		FROM information_schema.tables
+		WHERE table_schema = $1
+		  AND table_type = 'BASE TABLE'
+		ORDER BY table_name
+	`
+
+	rows, err := p.db.Query(query, currentSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			return nil, fmt.Errorf("failed to scan table name: %w", err)
+		}
+		tables = append(tables, tableName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating tables: %w", err)
+	}
+
+	return tables, nil
 }
 
 func (p *PostgresConnection) GetInfoSQL(infoType string) string {
@@ -182,12 +233,14 @@ func (p *PostgresConnection) GetInfoSQL(infoType string) string {
 	}
 }
 
-func (p *PostgresConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
-	escapedValue := strings. ReplaceAll(currentValue, "'", "''")
-	
+func (p *PostgresConnection) BuildUpdateStatement(
+	tableName, columnName, currentValue, pkColumn, pkValue string,
+) string {
+	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
+
 	if pkColumn != "" && pkValue != "" {
 		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
-		return fmt. Sprintf(
+		return fmt.Sprintf(
 			"-- PostgreSQL UPDATE statement\nUPDATE %s\nSET %s = '%s'\nWHERE %s = '%s';",
 			tableName,
 			columnName,
@@ -196,7 +249,7 @@ func (p *PostgresConnection) BuildUpdateStatement(tableName, columnName, current
 			escapedPkValue,
 		)
 	}
-	
+
 	return fmt.Sprintf(
 		"-- PostgreSQL UPDATE statement\n-- No primary key specified. Edit WHERE clause manually.\nUPDATE %s\nSET %s = '%s'\nWHERE <condition>;",
 		tableName,
@@ -205,7 +258,9 @@ func (p *PostgresConnection) BuildUpdateStatement(tableName, columnName, current
 	)
 }
 
-func (c *PostgresConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkValue string) string {
+func (c *PostgresConnection) BuildDeleteStatement(
+	tableName, primaryKeyCol, pkValue string,
+) string {
 	return fmt.Sprintf(
 		"DELETE FROM %s\nWHERE %s = '%s';",
 		tableName,
