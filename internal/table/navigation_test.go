@@ -65,15 +65,15 @@ func TestFormatValueIfJSON(t *testing.T) {
 			result := formatValueIfJSON(tt.input)
 
 			if tt.wantJSON {
-				// Se esperamos JSON formatado, o resultado deve ser diferente do input
-				// (exceto se já estava formatado) e deve conter newlines
+				// If we expect formatted JSON, the result should be different from input
+				// (except if already formatted) and should contain newlines
 				if result == tt.input && len(tt.input) > 20 {
 					t.Errorf(
 						"formatValueIfJSON() expected formatted JSON, but got original input",
 					)
 				}
 			} else {
-				// Se não esperamos JSON, o resultado deve ser igual ao input
+				// If we don't expect JSON, the result should equal the input
 				if result != tt.input {
 					t.Errorf(
 						"formatValueIfJSON() = %v, want %v",
@@ -90,7 +90,7 @@ func TestFormatValueIfJSON_FormattingCorrectness(t *testing.T) {
 	input := `{"name":"John","age":30,"address":{"city":"NYC","zip":"10001"}}`
 	result := formatValueIfJSON(input)
 
-	// Verificar que o resultado contém indentação adequada
+	// Verify that the result contains proper indentation
 	expected := `{
   "address": {
     "city": "NYC",
@@ -113,7 +113,7 @@ func TestFormatValueIfJSON_Array(t *testing.T) {
 	input := `[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]`
 	result := formatValueIfJSON(input)
 
-	// Verificar que o resultado contém indentação
+	// Verify that the result contains indentation
 	if !contains(result, "  ") {
 		t.Errorf(
 			"formatValueIfJSON() should format array with indentation, got: %s",
@@ -121,7 +121,7 @@ func TestFormatValueIfJSON_Array(t *testing.T) {
 		)
 	}
 
-	// Verificar que contém quebras de linha
+	// Verify that it contains line breaks
 	if !contains(result, "\n") {
 		t.Errorf(
 			"formatValueIfJSON() should format array with newlines, got: %s",
@@ -204,15 +204,15 @@ func TestDetailViewEditJSON(t *testing.T) {
 func TestFormatAndCompactJSON(t *testing.T) {
 	input := `{"user":{"name":"Alice","roles":["admin","user"]}}`
 
-	// Formatar
+	// Format
 	formatted := formatValueIfJSON(input)
 
-	// Verificar que está formatado
+	// Verify that it's formatted
 	if !contains(formatted, "\n") {
 		t.Errorf("Expected formatted JSON to contain newlines")
 	}
 
-	// Compactar novamente
+	// Compact again
 	var jsonData interface{}
 	if err := json.Unmarshal([]byte(formatted), &jsonData); err != nil {
 		t.Fatalf("Failed to parse formatted JSON: %v", err)
@@ -223,13 +223,13 @@ func TestFormatAndCompactJSON(t *testing.T) {
 		t.Fatalf("Failed to compact JSON: %v", err)
 	}
 
-	// Verificar que compactado não tem espaços extras
+	// Verify that compacted has no extra spaces
 	compactedStr := string(compacted)
 	if contains(compactedStr, "\n") {
 		t.Errorf("Compacted JSON should not contain newlines")
 	}
 
-	// Verificar que dados são preservados
+	// Verify that data is preserved
 	var original, compactedData interface{}
 	json.Unmarshal([]byte(input), &original)
 	json.Unmarshal(compacted, &compactedData)

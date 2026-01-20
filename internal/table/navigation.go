@@ -222,9 +222,9 @@ func (m Model) editFromDetailView() (Model, tea.Cmd) {
 	columnName := m.columns[m.selectedCol]
 	currentValue := m.data[m.selectedRow][m.selectedCol]
 
-	// Se o conteúdo está formatado (JSON), usar o valor formatado
+	// If the content is formatted (JSON), use the formatted value
 	if m.detailViewContent != currentValue {
-		// Está formatado, usar o conteúdo formatado
+		// It's formatted, use the formatted content
 		currentValue = m.detailViewContent
 	}
 
@@ -309,7 +309,7 @@ func (m Model) handleDetailViewEditComplete(
 	// Atualizar dados locais
 	m.data[m.selectedRow][m.selectedCol] = newValue
 
-	// Fechar detail view e voltar para tabela com célula destacada
+	// Close detail view and return to table with highlighted cell
 	m.detailViewMode = false
 	m.blinkUpdatedCell = true
 	m.updatedRow = m.selectedRow
@@ -337,7 +337,7 @@ func (m Model) scrollDetailViewUp() Model {
 
 func (m Model) scrollDetailViewDown() Model {
 	lines := strings.Count(m.detailViewContent, "\n") + 1
-	maxScroll := lines - (m.height - 10) // Reservar espaço para header e footer
+	maxScroll := lines - (m.height - 10) // Reserve space for header and footer
 	if maxScroll < 0 {
 		maxScroll = 0
 	}
@@ -358,11 +358,11 @@ func formatValueIfJSON(value string) string {
 	// Tentar fazer parse do JSON
 	var jsonData interface{}
 	if err := json.Unmarshal([]byte(trimmed), &jsonData); err != nil {
-		// Não é JSON válido, retornar valor original
+		// Not valid JSON, return original value
 		return value
 	}
 
-	// Formatar JSON com indentação
+	// Format JSON with indentation
 	formatted, err := json.MarshalIndent(jsonData, "", "  ")
 	if err != nil {
 		return value
