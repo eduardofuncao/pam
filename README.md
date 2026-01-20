@@ -372,7 +372,10 @@ You can also use the editor to edit queries before running them
 pam run daily_report --edit
 
 # Create and run a new query on the fly
-pam run --new
+pam run
+
+# Re-run the last executed query
+pam run --last
 
 # Edit all queries at once
 pam edit queries
@@ -404,9 +407,10 @@ pam edit queries
 | `list queries --oneline` | lists each query in one line | `pam list -o` |
 | `list queries <searchterm>` | lists queries containing search term | `pam list employees` |
 | `run <name\|id\|sql>` | Execute a query | `pam run users` or `pam run 2` |
+| `run` | Create and run a new query | `pam run` |
 | `run --edit` | Edit query before running | `pam run users --edit` |
-| `run --new` | Create and run new query | `pam run --new` |
-| `run` | Re-run last query | `pam run` |
+| `run --last`, `-l` | Re-run last executed query | `pam run --last` |
+
 
 ### Info
 
@@ -457,6 +461,7 @@ When viewing query results in the TUI, you have full Vim-style navigation and ed
 | `u` | Update current cell (opens editor) |
 | `D` | Delete current row (requires WHERE clause) |
 | `e` | Edit and re-run query |
+| `s` | Save current query |
 | `q`, `Ctrl+c`, `Esc` | Quit table view |
 
 ### Detail View Mode

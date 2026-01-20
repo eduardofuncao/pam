@@ -123,6 +123,7 @@ func (a *App) PrintGeneralHelp() {
 	fmt.Println("  pam switch dev")
 	fmt.Println("  pam add list_users \"SELECT * FROM users\"")
 	fmt.Println("  pam run list_users")
+	fmt.Println(" pam run \"select * from users\"")
 	fmt.Println("  pam list connections")
 	fmt.Println("  pam list queries")
 	fmt.Println("  pam edit config")
@@ -236,32 +237,19 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  pam run <query-name-or-id> [--edit | -e]")
-		fmt.Println("  pam query <query-name-or-id> [--edit | -e]")
-		fmt.Println(
-			"  pam run                      " + styles.Faint.Render(
-				"# runs the last query for the active connection",
-			),
-		)
+		fmt.Println("  pam run <query-name-or-id> [--edit | -e] [--last | -l]")
+		fmt.Println("  pam run                      " + styles.Faint.Render("# Opens the editor to build sql query"))
 		fmt.Println()
 		section("Description")
 		fmt.Println(
 			"  - Looks up a saved query by name or numeric ID and runs it against",
 		)
 		fmt.Println("    the current connection.")
-		fmt.Println(
-			"  - If no selector is provided, pam will try to execute the last query",
-		)
-		fmt.Println("    used for the current connection.")
-		fmt.Println(
-			"  - The result is rendered as an interactive table in your terminal.",
-		)
-		fmt.Println(
-			"  - With '--edit' or '-e', pam opens the query in your $EDITOR before",
-		)
-		fmt.Println(
-			"    running it and saves any changes back to the configuration.",
-		)
+		fmt.Println("  - If no selector is provided, pam will open the editor to build sql query")
+		fmt.Println("  - The result is rendered as an interactive table in your terminal.")
+		fmt.Println("  - With '--edit' or '-e', pam opens the query in your $EDITOR before")
+		fmt.Println("    running it and saves any changes back to the configuration.")
+		fmt.Println("  - With '--last' or '-l', runs the last used query")
 		fmt.Println()
 		section("Interactive table view")
 		fmt.Println(
@@ -270,66 +258,19 @@ func (a *App) PrintCommandHelp() {
 			),
 		)
 		fmt.Println()
-		fmt.Println(
-			"  Arrow keys / h j k l  " + styles.Faint.Render(
-				"Move selection around the table",
-			),
-		)
-		fmt.Println(
-			"  PageUp / Ctrl+u       " + styles.Faint.Render(
-				"Scroll by a page up",
-			),
-		)
-		fmt.Println(
-			"  PageDown / Ctrl+d     " + styles.Faint.Render(
-				"Scroll by a page down",
-			),
-		)
-		fmt.Println(
-			"  Home / 0 / _          " + styles.Faint.Render(
-				"Jump to first row",
-			),
-		)
-		fmt.Println(
-			"  End / $               " + styles.Faint.Render(
-				"Jump to last row",
-			),
-		)
-		fmt.Println(
-			"  g / G                 " + styles.Faint.Render(
-				"Jump to top / bottom",
-			),
-		)
-		fmt.Println(
-			"  y / Enter             " + styles.Faint.Render(
-				"Copy current cell value to clipboard (if supported)",
-			),
-		)
-		fmt.Println(
-			"  v                     " + styles.Faint.Render(
-				"Start multi-selection mode",
-			),
-		)
-		fmt.Println(
-			"  u                     " + styles.Faint.Render(
-				"Update selected cell",
-			),
-		)
-		fmt.Println(
-			"  D                     " + styles.Faint.Render(
-				"Delete current row (Shift+D)",
-			),
-		)
-		fmt.Println(
-			"  e                     " + styles.Faint.Render(
-				"Edit and re-run the query",
-			),
-		)
-		fmt.Println(
-			"  q / Ctrl+c            " + styles.Faint.Render(
-				"Quit the table view",
-			),
-		)
+		fmt.Println("  Arrow keys / h j k l  " + styles.Faint.Render("Move selection around the table"))
+		fmt.Println("  PageUp / Ctrl+u       " + styles.Faint.Render("Scroll by a page up"))
+		fmt.Println("  PageDown / Ctrl+d     " + styles.Faint.Render("Scroll by a page down"))
+		fmt.Println("  Home / 0 / _          " + styles.Faint.Render("Jump to first row"))
+		fmt.Println("  End / $               " + styles.Faint.Render("Jump to last row"))
+		fmt.Println("  g / G                 " + styles.Faint.Render("Jump to top / bottom"))
+		fmt.Println("  y / Enter             " + styles.Faint.Render("Copy current cell value to clipboard (if supported)"))
+		fmt.Println("  v                     " + styles.Faint.Render("Start multi-selection mode"))
+		fmt.Println("  u                     " + styles.Faint.Render("Update selected cell"))
+		fmt.Println("  d                     " + styles.Faint.Render("Delete current row (requires WHERE clause)"))
+		fmt.Println("  e                     " + styles.Faint.Render("Open the editor to update and rerun query"))
+		fmt.Println("  s                     " + styles.Faint.Render("Save current query"))
+		fmt.Println("  Esc /Ctrl+c           " + styles.Faint.Render("Quit the table view"))
 		fmt.Println()
 		fmt.Println(
 			styles.Faint.Render(
@@ -344,13 +285,10 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println()
 		section("Examples")
 		fmt.Println("  pam run list_users")
+		fmt.Println("  pam run \"select * from orders\"")
 		fmt.Println("  pam run 2 --edit")
+		fmt.Println("  pam run --last")
 		fmt.Println("  pam query list_users")
-		fmt.Println(
-			"  pam run              " + styles.Faint.Render(
-				"# run the last query for this connection",
-			),
-		)
 
 	case "list":
 		section("Command: list")
@@ -385,12 +323,9 @@ func (a *App) PrintCommandHelp() {
 			"  pam list                      # lists queries for the current connection",
 		)
 		fmt.Println("  pam list queries")
-		fmt.Println(
-			"  pam list queries emp          # list queries containing 'emp'",
-		)
-		fmt.Println(
-			"  pam list queries employees    # list queries containing 'employees'",
-		)
+		fmt.Println("  pam list queries emp          # list queries containing 'emp'")
+		fmt.Println("  pam list queries employees    # list queries containing 'employees'")
+		fmt.Println("  pam list queries --oneline    # list each query in one separate line")
 		fmt.Println("  pam list connections")
 
 	case "tables":
