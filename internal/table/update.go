@@ -18,6 +18,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleDeleteComplete(msg)
 	case queryEditCompleteMsg:
 		return m.handleQueryEditComplete(msg)
+	case detailViewEditCompleteMsg:
+		return m.handleDetailViewEditComplete(msg)
 	case tea.WindowSizeMsg:
 		return m.handleWindowResize(msg), nil
 	}
@@ -26,6 +28,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Se estiver no modo de visualização detalhada, lidar com teclas específicas
+	if m.detailViewMode {
+		switch msg.String() {
+		case "q", "esc":
+			return m.closeDetailView(), nil
+		case "enter":
+			// Fechar detail view e voltar para tabela
+			return m.closeDetailView(), nil
+		case "e":
+			// Editar o conteúdo da célula
+			if m.tableName != "" && m.primaryKeyCol != "" {
+				return m.editFromDetailView()
+			}
+			return m, nil
+		case "up", "k":
+			return m.scrollDetailViewUp(), nil
+		case "down", "j":
+			return m.scrollDetailViewDown(), nil
+		case "ctrl+c":
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
+	// Navegação normal da tabela
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
@@ -68,8 +95,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		}
-		// Otherwise, copy selection as before
-		return m.copySelection()
+		// Otherwise, show detail view (JSON viewer)
+		return m.showDetailView(), nil
 
 	case "u":
 		return m.updateCell()

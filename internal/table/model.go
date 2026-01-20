@@ -39,6 +39,9 @@ type Model struct {
 	editedQuery       string
 	lastExecutedQuery string
 	cellWidth         int
+	detailViewMode    bool
+	detailViewContent string
+	detailViewScroll  int
 	isTablesList      bool
 	onTableSelect     func(string) tea.Cmd
 	selectedTableName string
@@ -75,25 +78,23 @@ func New(
 	}
 
 	return Model{
-		selectedRow:       0,
-		selectedCol:       0,
-		offsetX:           0,
-		offsetY:           0,
-		columns:           columns,
-		columnTypes:       columnTypes,
-		data:              data,
-		elapsed:           elapsed,
-		visualMode:        false,
-		dbConnection:      conn,
-		tableName:         tableName,
-		primaryKeyCol:     primaryKeyCol,
-		currentQuery:      query,
-		shouldRerunQuery:  false,
-		editedQuery:       "",
-		cellWidth:         columnWidth,
-		isTablesList:      false,
-		onTableSelect:     nil,
-		selectedTableName: "",
+		selectedRow:      0,
+		selectedCol:      0,
+		offsetX:          0,
+		offsetY:          0,
+		columns:          columns,
+		columnTypes:      columnTypes,
+		data:             data,
+		elapsed:          elapsed,
+		visualMode:       false,
+		dbConnection:     conn,
+		tableName:        tableName,
+		primaryKeyCol:    primaryKeyCol,
+		currentQuery:     query,
+		shouldRerunQuery: false,
+		editedQuery:      "",
+		cellWidth:        columnWidth,
+		isTablesList:     false,
 	}
 }
 

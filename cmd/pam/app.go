@@ -46,6 +46,8 @@ func (a *App) Run() {
 		a.handleQuery()
 	case "list":
 		a.handleList()
+	case "ls":
+		a.handleListConnections()
 	case "edit":
 		a.handleEdit()
 	case "info":
@@ -104,7 +106,7 @@ func (a *App) printUsage() {
 		"  pam list queries     " + styles.Faint.Render("List saved queries"),
 	)
 	fmt.Println(
-		"  pam list connections " + styles.Faint.Render(
+		"  pam ls               " + styles.Faint.Render(
 			"List database connections",
 		),
 	)
@@ -128,4 +130,12 @@ func (a *App) printUsage() {
 func (a *App) printVersion() {
 	fmt.Println(styles.Title.Render("Pam's database drawer"))
 	fmt.Println(styles.Faint.Render("version: " + Version))
+}
+
+func (a *App) handleListConnections() {
+	// Set os.Args to simulate "pam list connections"
+	originalArgs := os.Args
+	os.Args = []string{os.Args[0], "list", "connections"}
+	a.handleList()
+	os.Args = originalArgs
 }

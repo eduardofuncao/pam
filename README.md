@@ -452,15 +452,35 @@ When viewing query results in the TUI, you have full Vim-style navigation and ed
 | Key | Action |
 |-----|--------|
 | `v` | Enter visual selection mode |
-| `y`, `Enter` | Copy selected cell(s) to clipboard |
+| `y` | Copy selected cell(s) to clipboard |
+| `Enter` | Show cell value in detail view (with JSON formatting) |
 | `u` | Update current cell (opens editor) |
 | `D` | Delete current row (requires WHERE clause) |
 | `e` | Edit and re-run query |
 | `q`, `Ctrl+c`, `Esc` | Quit table view |
 
+### Detail View Mode
+
+Press `Enter` on any cell to open a detailed view that shows the full cell content. If the content is valid JSON, it will be automatically formatted with proper indentation.
+
+**In Detail View:**
+
+| Key | Action |
+|-----|--------|
+| `↑`, `↓`, `j`, `k` | Scroll through content |
+| `e` | Edit cell content (opens editor with formatted JSON) |
+| `q`, `Esc`, `Enter` | Close detail view |
+
+When you press `e` in detail view:
+- The editor opens with the full content (JSON will be formatted)
+- Edit the content as needed
+- Save and close to update the database
+- JSON validation is performed automatically
+- The table view updates with the new value
+
 ### Visual Mode
 
-Press `v` to enter visual mode, then navigate to select a range of cells.  Press `y` or `Enter` to copy the selection.
+Press `v` to enter visual mode, then navigate to select a range of cells. Press `y` to copy the selection.
 
 ---
 
