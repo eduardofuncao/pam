@@ -8,6 +8,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
+	case exportCompleteMsg:
+		return m.handleExportComplete(msg)
+	case clearExportStatusMsg:
+		return m.handleClearExportStatus(), nil
 	case blinkMsg:
 		m.blinkCopiedCell = false
 		m.blinkUpdatedCell = false
@@ -31,6 +35,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle export format selection
+	if m.exportWaiting.active {
+		return m.executeExportForFormat(msg.String())
+	}
+
 	// If in detailed view mode, handle specific keys
 	if m.detailViewMode {
 		switch msg.String() {
@@ -90,6 +99,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "y":
 		return m.copySelection()
+	case "x":
+		return m.startExportFormatSelection()
 
 	case "enter":
 		// If this is a tables list, select the table

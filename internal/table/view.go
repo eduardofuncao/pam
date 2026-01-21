@@ -120,6 +120,25 @@ func (m Model) renderDataRow(rowIndex int) string {
 }
 
 func (m Model) renderFooter() string {
+	// Show export format prompt if active
+  if m.exportWaiting.active {
+      promptText := fmt.Sprintf(
+          "Export as %sSV %sSON %sSV %sTML %sQL %sarkdown",
+          styles.TableHeader.Render("[C]"),
+          styles.TableHeader.Render("[J]"),
+          styles.TableHeader.Render("[T]"),
+          styles.TableHeader.Render("[H]"),
+          styles.TableHeader.Render("[S]"),
+          styles.TableHeader.Render("[M]"),
+      )
+      return "\n" + promptText
+  }
+
+	// Show export status if available
+	if m.exportStatus != "" {
+		return "\n" + styles.Success.Render(m.exportStatus)
+	}
+
 	currentCellValue := ""
 	columnType := ""
 
@@ -179,6 +198,7 @@ func (m Model) renderFooter() string {
 	edit := styles.TableHeader.Render("e") + styles.Faint.Render("ditSQL")
 	save := styles.TableHeader.Render("s") + styles.Faint.Render("ave")
 	yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
+	exportKey := styles.Faint.Render("e") + styles.TableHeader.Render("x") + styles.Faint.Render("port")
 	quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
 	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
 
@@ -198,21 +218,43 @@ func (m Model) renderFooter() string {
 			hjkl,
 		)
 	} else {
-		footer = fmt.Sprintf(
-			"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s  %s",
-			cellPreview,
-			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
-			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-			styles.Faint.Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
-			updateInfo,
-			delInfo,
-			yank,
-			sel,
-			edit,
-			save,
-			quit,
-			hjkl,
-		)
+		if m.visualMode {
+			footer = fmt.Sprintf(
+				"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+				cellPreview,
+				styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
+				styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
+				styles.Faint.Render(
+					fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
+				),
+				yank,
+				exportKey,
+				sel,
+				edit,
+				save,
+				quit,
+				hjkl,
+			)
+		} else {
+			footer = fmt.Sprintf(
+				"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s  %s  %s",
+				cellPreview,
+				styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
+				styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
+				styles.Faint.Render(
+					fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
+				),
+				updateInfo,
+				delInfo,
+				yank,
+				sel,
+				edit,
+				save,
+				exportKey,
+				quit,
+				hjkl,
+			)
+		}
 	}
 	return footer
 }

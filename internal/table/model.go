@@ -46,7 +46,9 @@ type Model struct {
 	onTableSelect     func(string) tea.Cmd
 	selectedTableName string
 	saveQueryCallback func(query db.Query) (db.Query, error)
-	statusMessage    string
+	statusMessage     string
+	exportWaiting     exportWaitingFormatState
+	exportStatus      string
 }
 
 type blinkMsg struct{}
