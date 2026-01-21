@@ -141,6 +141,8 @@ func (m Model) handleDeleteComplete(msg deleteCompleteMsg) (tea.Model, tea.Cmd) 
 
 func (m Model) buildDeleteStatement() string {
 	pkValue := ""
+	var multipleMatches bool
+
 	if m.primaryKeyCol != "" {
 		for i, col := range m.columns {
 			if col == m.primaryKeyCol {
@@ -150,11 +152,21 @@ func (m Model) buildDeleteStatement() string {
 		}
 	}
 
-	return m.dbConnection.BuildDeleteStatement(
+	if m.primaryKeyCol != "" && pkValue == "" {
+		pkValue, multipleMatches = m.fetchPrimaryKeyValue()
+	}
+
+	stmt := m.dbConnection.BuildDeleteStatement(
 		m.tableName,
 		m.primaryKeyCol,
 		pkValue,
 	)
+
+	if multipleMatches && pkValue != "" {
+		stmt = fmt.Sprintf("-- Warning: Multiple rows matched the WHERE clause, using PK from first match\n%s", stmt)
+	}
+
+	return stmt
 }
 
 func (m Model) executeDelete(sql string) error {

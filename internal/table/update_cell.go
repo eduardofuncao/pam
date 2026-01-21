@@ -132,6 +132,8 @@ func (m Model) buildUpdateStatement() string {
 	currentValue := m.data[m.selectedRow][m.selectedCol]
 
 	pkValue := ""
+	var multipleMatches bool
+
 	if m.primaryKeyCol != "" {
 		for i, col := range m.columns {
 			if col == m.primaryKeyCol {
@@ -141,13 +143,76 @@ func (m Model) buildUpdateStatement() string {
 		}
 	}
 
-	return m.dbConnection.BuildUpdateStatement(
+	// If PK not found in result set, try to fetch it
+	if m.primaryKeyCol != "" && pkValue == "" {
+		pkValue, multipleMatches = m.fetchPrimaryKeyValue()
+	}
+
+	stmt := m.dbConnection.BuildUpdateStatement(
 		m.tableName,
 		columnName,
 		currentValue,
 		m.primaryKeyCol,
 		pkValue,
 	)
+
+	if multipleMatches && pkValue != "" {
+		stmt = fmt.Sprintf("-- Warning: Multiple rows matched the WHERE clause, using PK from first match\n%s", stmt)
+	}
+
+	return stmt
+}
+
+func (m Model) fetchPrimaryKeyValue() (string, bool) {
+	if m.primaryKeyCol == "" || m.tableName == "" {
+		return "", false
+	}
+
+	// Build WHERE clause from all columns in current row
+	var whereConditions []string
+	for i, col := range m.columns {
+		val := m.data[m.selectedRow][i]
+		whereConditions = append(whereConditions, fmt.Sprintf("%s = '%s'", col, escapeSQLValue(val)))
+	}
+
+	if len(whereConditions) == 0 {
+		return "", false
+	}
+
+	whereClause := strings.Join(whereConditions, " AND ")
+
+	// Query for PK value
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s", m.primaryKeyCol, m.tableName, whereClause)
+
+	rows, err := m.dbConnection.ExecQuery(query)
+	if err != nil {
+		return "", false
+	}
+	defer rows.Close()
+
+	// Collect all PK values to check for multiple matches
+	var pkValues []string
+	for rows.Next() {
+		var pkVal string
+		if err := rows.Scan(&pkVal); err != nil {
+			continue
+		}
+		pkValues = append(pkValues, pkVal)
+	}
+
+	if len(pkValues) == 0 {
+		return "", false
+	}
+
+	if len(pkValues) > 1 {
+		return pkValues[0], true
+	}
+
+	return pkValues[0], false
+}
+
+func escapeSQLValue(val string) string {
+	return strings.ReplaceAll(val, "'", "''")
 }
 
 func (m Model) executeUpdate(sql string) error {
