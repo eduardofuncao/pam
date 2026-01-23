@@ -109,7 +109,7 @@ func (a *App) handleTables() {
 
 	// Extract just the name column by wrapping in a subquery
 	nameOnlyQuery := fmt.Sprintf(
-		"SELECT name FROM (%s) AS tables_info ORDER BY name",
+		"SELECT name FROM (%s) AS tables_info ORDER BY name ASC",
 		queryStr,
 	)
 

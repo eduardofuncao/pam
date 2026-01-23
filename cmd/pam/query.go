@@ -28,11 +28,15 @@ type resolvedQuery struct {
 
 func (a *App) handleQuery() {
 	if a.config.CurrentConnection == "" {
-		printError("No active connection.   Use 'pam switch <connection>' or 'pam init' first")
+		printError(
+			"No active connection.   Use 'pam switch <connection>' or 'pam init' first",
+		)
 	}
 
 	flags := parseQueryFlags()
-	conn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
+	conn := config.FromConnectionYaml(
+		a.config.Connections[a.config.CurrentConnection],
+	)
 
 	resolved := a.resolveQuery(flags, conn)
 
@@ -59,7 +63,10 @@ func parseQueryFlags() queryFlags {
 	return flags
 }
 
-func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolvedQuery {
+func (a *App) resolveQuery(
+	flags queryFlags,
+	conn db.DatabaseConnection,
+) resolvedQuery {
 	// Priority 1: New query in editor witm pam run --new
 	if flags.newQuery {
 		return resolvedQuery{
@@ -91,7 +98,9 @@ func (a *App) resolveQuery(flags queryFlags, conn db.DatabaseConnection) resolve
 	// Priority 4: Last run query
 	lastQuery := a.config.Connections[a.config.CurrentConnection].LastQuery
 	if lastQuery.Name == "" {
-		printError("No last query found.  Usage: pam run <query-name|sql> or pam run -n")
+		printError(
+			"No last query found.  Usage: pam run <query-name|sql> or pam run -n",
+		)
 	}
 	return resolvedQuery{
 		query:    lastQuery,
@@ -174,22 +183,38 @@ func (a *App) openExternalEditor(query db.Query) (db.Query, error) {
 	return query, nil
 }
 
-func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection, isInline bool) {
+func (a *App) executeQuery(
+	query db.Query,
+	conn db.DatabaseConnection,
+	isInline bool,
+) {
 	if err := conn.Open(); err != nil {
-		printError("Could not open connection to %s/%s: %s", conn.GetDbType(), conn.GetName(), err)
+		printError(
+			"Could not open connection to %s/%s: %s",
+			conn.GetDbType(),
+			conn.GetName(),
+			err,
+		)
 	}
 	defer conn.Close()
 
 	if isSelectQuery(query.SQL) {
 		originalQuery := query
-		a.executeSelect(query.SQL, query.Name, conn, &query, isInline, func(editedSQL string) {
-			editedQuery := db.Query{
-				Name: originalQuery.Name,
-				SQL:  editedSQL,
-				Id:   originalQuery.Id,
-			}
-			a.executeQuery(editedQuery, conn, true)
-		})
+		a.executeSelect(
+			query.SQL,
+			query.Name,
+			conn,
+			&query,
+			isInline,
+			func(editedSQL string) {
+				editedQuery := db.Query{
+					Name: originalQuery.Name,
+					SQL:  editedSQL,
+					Id:   originalQuery.Id,
+				}
+				a.executeQuery(editedQuery, conn, true)
+			},
+		)
 	} else {
 		a.executeNonSelect(query, conn, isInline)
 	}
@@ -197,7 +222,13 @@ func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection, isInline 
 
 // executeSelect executes SELECT queries and renders results
 // Used by both regular queries (with metadata) and info commands (without metadata)
-func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, query *db.Query, isInline bool, onRerun func(string)) {
+func (a *App) executeSelect(
+	sql, queryName string,
+	conn db.DatabaseConnection,
+	query *db.Query,
+	isInline bool,
+	onRerun func(string),
+) {
 	start := time.Now()
 	done := make(chan struct{})
 	go spinner.CircleWaitWithTimer(done)
@@ -248,31 +279,67 @@ func (a *App) executeSelect(sql, queryName string, conn db.DatabaseConnection, q
 	}
 
 	// Render the TUI
-	model, err := table.Render(columns, data, elapsed, conn, tableName, primaryKey, q, a.config.DefaultColumnWidth)
+	model, err := table.Render(
+		columns,
+		data,
+		elapsed,
+		conn,
+		tableName,
+		primaryKey,
+		q,
+		a.config.DefaultColumnWidth,
+	)
 	if err != nil {
 		printError("Error rendering table: %v", err)
 	}
 
 	// Handle re-run
 	if model.ShouldRerunQuery() {
-		onRerun(model.GetEditedQuery().SQL)
+		if onRerun != nil {
+			onRerun(model.GetEditedQuery().SQL)
+		} else {
+			// If onRerun is nil, re-execute directly
+			editedQuery := model.GetEditedQuery()
+			a.executeSelect(
+				editedQuery.SQL,
+				editedQuery.Name,
+				conn,
+				&editedQuery,
+				true,
+				nil,
+			)
+		}
 	}
 }
 
-func (a *App) extractMetadata(conn db.DatabaseConnection, query db.Query, isInline bool) (string, string) {
+func (a *App) extractMetadata(
+	conn db.DatabaseConnection,
+	query db.Query,
+	isInline bool,
+) (string, string) {
 	metadata, err := db.InferTableMetadata(conn, query)
 	if err == nil && metadata != nil {
 		return metadata.TableName, metadata.PrimaryKey
 	}
 
 	if !isInline {
-		fmt.Fprintf(os.Stderr, styles.Faint.Render("Warning: Could not extract table metadata %v\n"), err)
+		fmt.Fprintf(
+			os.Stderr,
+			styles.Faint.Render(
+				"Warning: Could not extract table metadata %v\n",
+			),
+			err,
+		)
 	}
 
 	return "", ""
 }
 
-func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInline bool) {
+func (a *App) executeNonSelect(
+	query db.Query,
+	conn db.DatabaseConnection,
+	isInline bool,
+) {
 	start := time.Now()
 	done := make(chan struct{})
 	go spinner.CircleWaitWithTimer(done)
@@ -285,7 +352,14 @@ func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInl
 		printError("Could not execute command: %v", err)
 	}
 
-	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Command executed successfully in %.2fs", elapsed.Seconds())))
+	fmt.Println(
+		styles.Success.Render(
+			fmt.Sprintf(
+				"✓ Command executed successfully in %.2fs",
+				elapsed.Seconds(),
+			),
+		),
+	)
 
 	if !isInline {
 		fmt.Println(styles.Faint.Render("\nExecuted SQL:"))
@@ -295,7 +369,15 @@ func (a *App) executeNonSelect(query db.Query, conn db.DatabaseConnection, isInl
 
 func isSelectQuery(sql string) bool {
 	upper := strings.ToUpper(strings.TrimSpace(sql))
-	keywords := []string{"SELECT", "WITH", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "PRAGMA"}
+	keywords := []string{
+		"SELECT",
+		"WITH",
+		"SHOW",
+		"DESCRIBE",
+		"DESC",
+		"EXPLAIN",
+		"PRAGMA",
+	}
 
 	for _, kw := range keywords {
 		if upper == kw || strings.HasPrefix(upper, kw+" ") {

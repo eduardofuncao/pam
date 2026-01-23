@@ -68,10 +68,14 @@ func (a *App) PrintGeneralHelp() {
 		),
 	)
 	fmt.Println(
-		"  tables      " + styles.Faint.Render("List or query database tables"),
+		"  tables      " + styles.Faint.Render(
+			"List or query database tables (aliases: t, explore)",
+		),
 	)
 	fmt.Println(
-		"  list        " + styles.Faint.Render("List connections or queries"),
+		"  list        " + styles.Faint.Render(
+			"List connections or queries (alias: ls for connections)",
+		),
 	)
 	fmt.Println(
 		"  info        " + styles.Faint.Render(
@@ -98,6 +102,18 @@ func (a *App) PrintGeneralHelp() {
 			"Show help for pam or a specific command",
 		),
 	)
+	fmt.Println()
+
+	// Command Aliases
+	fmt.Println(styles.Title.Render("Command Aliases"))
+	fmt.Println("  use              → switch")
+	fmt.Println("  save             → add")
+	fmt.Println("  delete           → remove")
+	fmt.Println("  query            → run")
+	fmt.Println("  ls               → list connections")
+	fmt.Println("  t, explore       → tables")
+	fmt.Println("  test             → status")
+	fmt.Println("  clear, unset     → disconnect")
 	fmt.Println()
 
 	// Short help
@@ -237,6 +253,8 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println()
 		section("Usage")
 		fmt.Println("  pam run <query-name-or-id> [--edit | -e]")
+		fmt.Println("  pam run \"<inline-sql>\"")
+		fmt.Println("  pam run [--new | -n]")
 		fmt.Println("  pam query <query-name-or-id> [--edit | -e]")
 		fmt.Println(
 			"  pam run                      " + styles.Faint.Render(
@@ -254,6 +272,9 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println("    used for the current connection.")
 		fmt.Println(
+			"  - You can also run inline SQL by wrapping it in quotes.",
+		)
+		fmt.Println(
 			"  - The result is rendered as an interactive table in your terminal.",
 		)
 		fmt.Println(
@@ -261,6 +282,12 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println(
 			"    running it and saves any changes back to the configuration.",
+		)
+		fmt.Println(
+			"  - With '--new' or '-n', pam opens your $EDITOR to create a new query",
+		)
+		fmt.Println(
+			"    that runs immediately without being saved.",
 		)
 		fmt.Println()
 		section("Interactive table view")
@@ -345,6 +372,10 @@ func (a *App) PrintCommandHelp() {
 		section("Examples")
 		fmt.Println("  pam run list_users")
 		fmt.Println("  pam run 2 --edit")
+		fmt.Println(
+			"  pam run \"SELECT * FROM employees WHERE department = 'IT'\"",
+		)
+		fmt.Println("  pam run --new")
 		fmt.Println("  pam query list_users")
 		fmt.Println(
 			"  pam run              " + styles.Faint.Render(
@@ -361,7 +392,9 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  pam list [connections | queries] [search-term]")
+		fmt.Println(
+			"  pam list [connections | queries] [search-term] [--oneline | -o]",
+		)
 		fmt.Println()
 		section("Description")
 		fmt.Println(
@@ -380,6 +413,13 @@ func (a *App) PrintCommandHelp() {
 			),
 		)
 		fmt.Println()
+		section("Flags")
+		fmt.Println(
+			"  --oneline, -o  " + styles.Faint.Render(
+				"Display each query on a single line (useful for scripting)",
+			),
+		)
+		fmt.Println()
 		section("Examples")
 		fmt.Println(
 			"  pam list                      # lists queries for the current connection",
@@ -391,9 +431,12 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println(
 			"  pam list queries employees    # list queries containing 'employees'",
 		)
+		fmt.Println(
+			"  pam list queries --oneline    # list queries in one-line format",
+		)
 		fmt.Println("  pam list connections")
 
-	case "tables":
+	case "tables", "t", "explore":
 		section("Command: tables")
 		fmt.Println(
 			styles.Faint.Render(
@@ -401,8 +444,13 @@ func (a *App) PrintCommandHelp() {
 			),
 		)
 		fmt.Println()
+		section("Aliases")
+		fmt.Println("  t, explore")
+		fmt.Println()
 		section("Usage")
 		fmt.Println("  pam tables [table-name] [--oneline | -o]")
+		fmt.Println("  pam t [table-name] [--oneline | -o]")
+		fmt.Println("  pam explore [table-name] [--oneline | -o]")
 		fmt.Println()
 		section("Description")
 		fmt.Println(
@@ -424,7 +472,7 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  pam tables users        # query the users table")
 		fmt.Println("  pam tables --oneline    # list tables in oneline format")
 
-	case "disconnect":
+	case "disconnect", "clear", "unset":
 		section("Command: disconnect")
 		fmt.Println(
 			styles.Faint.Render(
@@ -432,8 +480,13 @@ func (a *App) PrintCommandHelp() {
 			),
 		)
 		fmt.Println()
+		section("Aliases")
+		fmt.Println("  clear, unset")
+		fmt.Println()
 		section("Usage")
 		fmt.Println("  pam disconnect")
+		fmt.Println("  pam clear")
+		fmt.Println("  pam unset")
 		fmt.Println()
 		section("Description")
 		fmt.Println(
@@ -443,6 +496,7 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println()
 		section("Examples")
 		fmt.Println("  pam disconnect")
+		fmt.Println("  pam clear")
 
 	case "edit":
 		section("Command: edit")
@@ -504,12 +558,16 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  pam info tables")
 		fmt.Println("  pam info views")
 
-	case "status":
+	case "status", "test":
 		section("Command: status")
 		fmt.Println(styles.Faint.Render("Show the current active connection."))
 		fmt.Println()
+		section("Aliases")
+		fmt.Println("  test")
+		fmt.Println()
 		section("Usage")
 		fmt.Println("  pam status")
+		fmt.Println("  pam test")
 
 	case "history":
 		section("Command: history")
@@ -541,6 +599,25 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  pam help")
 		fmt.Println("  pam help run")
 		fmt.Println("  pam help list")
+
+	case "ls":
+		// Redirect to list connections help
+		section("Command: ls")
+		fmt.Println(styles.Faint.Render("Shortcut for 'pam list connections'."))
+		fmt.Println()
+		section("Usage")
+		fmt.Println("  pam ls")
+		fmt.Println()
+		section("Description")
+		fmt.Println("  Lists all configured database connections.")
+		fmt.Println("  The active connection is highlighted.")
+		fmt.Println()
+		section("Examples")
+		fmt.Println("  pam ls")
+		fmt.Println()
+		fmt.Println(
+			styles.Faint.Render("See 'pam help list' for more options."),
+		)
 
 	default:
 		fmt.Printf("%s %q\n\n", styles.Error.Render("Unknown command"), cmd)

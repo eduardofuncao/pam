@@ -14,7 +14,7 @@ func (m Model) View() string {
 		return "Loading..."
 	}
 
-	// Se estiver no modo de visualização detalhada, mostrar a view detalhada
+	// If in detail view mode, show the detail view
 	if m.detailViewMode {
 		return m.renderDetailView()
 	}
@@ -85,7 +85,20 @@ func (m Model) renderHeader() string {
 			pkIcon = "⚿ "
 		}
 
-		columnDisplay := pkIcon + typeIcon + m.columns[j]
+		sortIcon := ""
+		if m.sortColumn != "" && j < len(m.columns) &&
+			m.columns[j] == m.sortColumn {
+			if m.sortDirection == "ASC" {
+				sortIcon = " ↑"
+			} else if m.sortDirection == "DESC" {
+				sortIcon = " ↓"
+			} else {
+				// No direction specified (default sort)
+				sortIcon = " •"
+			}
+		}
+
+		columnDisplay := pkIcon + typeIcon + m.columns[j] + sortIcon
 		content := formatCell(columnDisplay, m.cellWidth)
 		cells = append(cells, styles.TableHeader.Render(content))
 	}
@@ -165,13 +178,14 @@ func (m Model) renderFooter() string {
 	sel := styles.TableHeader.Render("v") + styles.Faint.Render("sel")
 	edit := styles.TableHeader.Render("e") + styles.Faint.Render("ditSQL")
 	yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
+	sort := styles.TableHeader.Render("f") + styles.Faint.Render("sort")
 	quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
 	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
 
 	var footer string
 	if m.isTablesList {
 		footer = fmt.Sprintf(
-			"\n%s%s %s | %s | %s  %s  %s  %s  %s",
+			"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s",
 			cellPreview,
 			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
 			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
@@ -180,13 +194,14 @@ func (m Model) renderFooter() string {
 			),
 			enterInfo,
 			yank,
+			sort,
 			edit,
 			quit,
 			hjkl,
 		)
 	} else {
 		footer = fmt.Sprintf(
-			"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
+			"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s  %s",
 			cellPreview,
 			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
 			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
@@ -197,6 +212,7 @@ func (m Model) renderFooter() string {
 			delInfo,
 			yank,
 			sel,
+			sort,
 			edit,
 			quit,
 			hjkl,
@@ -261,8 +277,10 @@ func getTypeIcon(typeName string) string {
 	}
 
 	// Decimal/Float types
-	if strings.Contains(upper, "DECIMAL") || strings.Contains(upper, "NUMERIC") ||
-		strings.Contains(upper, "FLOAT") || strings.Contains(upper, "DOUBLE") ||
+	if strings.Contains(upper, "DECIMAL") ||
+		strings.Contains(upper, "NUMERIC") ||
+		strings.Contains(upper, "FLOAT") ||
+		strings.Contains(upper, "DOUBLE") ||
 		strings.Contains(upper, "REAL") ||
 		strings.Contains(upper, "NUMBER") ||
 		strings.Contains(upper, "MONEY") {
@@ -320,7 +338,8 @@ func getTypeIcon(typeName string) string {
 	}
 
 	// Geometric/Spatial types
-	if strings.Contains(upper, "GEOMETRY") || strings.Contains(upper, "POINT") ||
+	if strings.Contains(upper, "GEOMETRY") ||
+		strings.Contains(upper, "POINT") ||
 		strings.Contains(upper, "POLYGON") ||
 		strings.Contains(upper, "LINE") {
 		return "◉"
@@ -333,7 +352,7 @@ func getTypeIcon(typeName string) string {
 func (m Model) renderDetailView() string {
 	var b strings.Builder
 
-	// Obter informações da célula selecionada
+	// Get selected cell information
 	columnName := ""
 	columnType := ""
 	if m.selectedCol >= 0 && m.selectedCol < len(m.columns) {
@@ -351,7 +370,7 @@ func (m Model) renderDetailView() string {
 	b.WriteString(styles.Title.Render(titleLine))
 	b.WriteString("\n")
 
-	// Informação da posição
+	// Position information
 	posInfo := fmt.Sprintf(
 		"Row %d, Column %d",
 		m.selectedRow+1,
@@ -359,7 +378,7 @@ func (m Model) renderDetailView() string {
 	)
 	b.WriteString(styles.Faint.Render(posInfo))
 
-	// Mostrar se pode editar
+	// Show if editable
 	if m.tableName != "" && m.primaryKeyCol != "" {
 		b.WriteString(" ")
 		b.WriteString(styles.Faint.Render("• Press 'e' to edit"))
@@ -375,9 +394,9 @@ func (m Model) renderDetailView() string {
 	b.WriteString(styles.Separator.Render(strings.Repeat("─", separatorWidth)))
 	b.WriteString("\n\n")
 
-	// Conteúdo com scroll
+	// Content with scroll
 	lines := strings.Split(m.detailViewContent, "\n")
-	availableHeight := m.height - 10 // Reservar espaço para header e footer
+	availableHeight := m.height - 10 // Reserve space for header and footer
 
 	if availableHeight < 5 {
 		availableHeight = 5
@@ -396,10 +415,10 @@ func (m Model) renderDetailView() string {
 		}
 	}
 
-	// Renderizar as linhas visíveis
+	// Render visible lines
 	for i := startLine; i < endLine; i++ {
 		line := lines[i]
-		// Truncar linha se for muito longa
+		// Truncate line if too long
 		if len(line) > m.width-4 {
 			line = line[:m.width-7] + "..."
 		}
@@ -407,7 +426,7 @@ func (m Model) renderDetailView() string {
 		b.WriteString("\n")
 	}
 
-	// Padding se necessário
+	// Padding if necessary
 	renderedLines := endLine - startLine
 	for i := renderedLines; i < availableHeight; i++ {
 		b.WriteString("\n")
@@ -418,7 +437,7 @@ func (m Model) renderDetailView() string {
 	b.WriteString(styles.Separator.Render(strings.Repeat("─", separatorWidth)))
 	b.WriteString("\n")
 
-	// Footer com instruções
+	// Footer with instructions
 	scrollInfo := ""
 	if len(lines) > availableHeight {
 		scrollInfo = styles.Faint.Render(

@@ -196,6 +196,11 @@ g/G        # Jump to first/last row
 y          # Yank (copy) current cell
 v          # Enter visual mode to select multiple cells and copy with y
 
+# Sort data
+f          # Toggle sort on current column
+           # In tables list: • default → ↑ ASC → ↓ DESC → • default
+           # In regular queries: none → ↑ ASC → ↓ DESC → none
+
 # Edit data directly
 u          # Update current cell (opens your $EDITOR)
 D          # Delete current row
@@ -389,10 +394,11 @@ pam edit queries
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `create <name> <type> <conn-string> [schema]` | Create new database connection | `pam create mydb postgres "postgresql://..."` |
+| `init <name> <type> <conn-string> [schema]` | Create new database connection | `pam init mydb postgres "postgresql://..."` |
 | `switch <name>` | Switch to a different connection | `pam switch production` |
 | `status` | Show current active connection | `pam status` |
 | `list connections` | List all configured connections | `pam list connections` |
+| `disconnect` | Disconnect from current database | `pam disconnect` |
 
 ### Query Operations
 
@@ -408,6 +414,14 @@ pam edit queries
 | `run --new` | Create and run new query | `pam run --new` |
 | `run` | Re-run last query | `pam run` |
 
+### Tables
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `tables` | List all tables in current database | `pam tables` |
+| `tables <table>` | Query a specific table | `pam tables users` |
+| `tables --oneline` | List tables one per line | `pam tables --oneline` |
+
 ### Info
 
 | Command | Description | Example |
@@ -422,6 +436,22 @@ pam edit queries
 | `edit config` | Edit main configuration file | `pam edit config` |
 | `edit queries` | Edit all queries for current connection | `pam edit queries` |
 | `help [command]` | Show help information | `pam help run` |
+
+### Command Aliases
+
+Many commands have shorter aliases for faster typing:
+
+| Alias | Full Command | Description |
+|-------|--------------|-------------|
+| `use` | `switch` | Switch active connection |
+| `save` | `add` | Save a new query |
+| `delete` | `remove` | Remove a saved query |
+| `query` | `run` | Execute a query |
+| `ls` | `list connections` | List all connections |
+| `t` | `tables` | List or query tables |
+| `explore` | `tables` | List or query tables |
+| `test` | `status` | Show current connection |
+| `clear`, `unset` | `disconnect` | Disconnect from database |
 
 ---
 

@@ -28,16 +28,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Se estiver no modo de visualização detalhada, lidar com teclas específicas
+	// If in detail view mode, handle specific keys
 	if m.detailViewMode {
 		switch msg.String() {
 		case "q", "esc":
 			return m.closeDetailView(), nil
 		case "enter":
-			// Fechar detail view e voltar para tabela
+			// Close detail view and return to table
 			return m.closeDetailView(), nil
 		case "e":
-			// Editar o conteúdo da célula
+			// Edit cell content
 			if m.tableName != "" && m.primaryKeyCol != "" {
 				return m.editFromDetailView()
 			}
@@ -52,7 +52,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Navegação normal da tabela
+	// Normal table navigation
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
@@ -104,6 +104,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.deleteRow()
 	case "e":
 		return m.editAndRerunQuery()
+	case "f":
+		return m.toggleSort()
 	}
 
 	return m, nil

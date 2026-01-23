@@ -52,13 +52,11 @@ func (a *App) Run() {
 		a.handleEdit()
 	case "info":
 		a.handleInfo()
-	case "explore":
-		a.handleExplore()
 	case "status", "test":
 		a.handleStatus()
 	case "history":
 		a.handleHistory()
-	case "tables", "t":
+	case "tables", "t", "explore":
 		a.handleTables()
 	case "disconnect", "clear", "unset":
 		a.handleDisconnect()
