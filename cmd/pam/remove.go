@@ -10,7 +10,7 @@ import (
 
 func (a *App) handleRemove() {
 	if len(os.Args) < 3 {
-		printError("Usage:  pam remove <query-name>")
+		printError("Usage:  pam remove <run-name>")
 	}
 
 	conn := a.config.Connections[a.config.CurrentConnection]
@@ -28,5 +28,5 @@ func (a *App) handleRemove() {
 		printError("Could not save configuration file: %v", err)
 	}
 
-	fmt. Println(styles.Success.Render(fmt.Sprintf("✓ Removed query '%s'", query.Name)))
+	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Removed run '%s'", query.Name)))
 }

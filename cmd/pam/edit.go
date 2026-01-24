@@ -9,6 +9,7 @@ import (
 
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/editor"
 	"github.com/eduardofuncao/pam/internal/styles"
 )
 
@@ -62,18 +63,11 @@ func (a *App) editQueries(editorCmd string) {
 		log.Fatalf("Connection %s not found", a.config.CurrentConnection)
 	}
 
-	tmpFile, err := os.CreateTemp("", "pam-queries-*.sql")
-	if err != nil {
-		log.Fatalf("Failed to create temp file: %v", err)
-	}
-	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
-
 	var content strings.Builder
-	content.WriteString(fmt.Sprintf("-- Editing queries for connection: %s (%s)\n", 
+	content.WriteString(fmt.Sprintf("-- Editing queries for connection: %s (%s)\n",
 		a.config.CurrentConnection, conn.DBType))
-	content.WriteString("-- Format: -- queryname\n")
-	content.WriteString("--         SQL query here\n")
+	content.WriteString("-- Format: -- runname\n")
+	content.WriteString("--         SQL run here\n")
 	content.WriteString("-- Save and close to update\n\n")
 
 	for _, query := range conn.Queries {
@@ -82,9 +76,12 @@ func (a *App) editQueries(editorCmd string) {
 		content.WriteString("\n\n")
 	}
 
-	if _, err := tmpFile.Write([]byte(content.String())); err != nil {
-		log.Fatalf("Failed to write to temp file: %v", err)
+	tmpFile, err := editor.CreateTempFile("pam-queries-", content.String())
+	if err != nil {
+		log.Fatalf("Failed to create temp file: %v", err)
 	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
 	tmpFile.Close()
 
 	cmd := exec.Command(editorCmd, tmpPath)
@@ -95,12 +92,12 @@ func (a *App) editQueries(editorCmd string) {
 		log.Fatalf("Failed to open editor: %v", err)
 	}
 
-	editedData, err := os.ReadFile(tmpPath)
+	editedData, err := editor.ReadTempFile(tmpPath)
 	if err != nil {
 		log.Fatalf("Failed to read edited file: %v", err)
 	}
 
-	editedQueries, err := parseSQLQueriesFile(string(editedData))
+	editedQueries, err := parseSQLQueriesFile(editedData)
 	if err != nil {
 		log.Fatalf("Failed to parse edited queries: %v", err)
 	}

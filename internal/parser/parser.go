@@ -8,11 +8,11 @@ import (
 )
 
 var sqlKeywords = []string{
-	"LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL JOIN", "CROSS JOIN",
 	"FULL OUTER JOIN", "LEFT OUTER JOIN", "RIGHT OUTER JOIN",
+	"LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL JOIN", "CROSS JOIN",
 	"INSERT INTO", "DELETE FROM", "GROUP BY", "ORDER BY",
 	"UNION ALL", "FETCH FIRST",
-	"SELECT", "FROM", "WHERE", "JOIN", "ON", "HAVING",
+	"SELECT", "FROM", "WHERE", "ON", "HAVING",
 	"LIMIT", "OFFSET", "UNION", "UPDATE", "VALUES", "SET",
 }
 
@@ -31,11 +31,17 @@ func FormatSQLWithLineBreaks(sql string) string {
 
 	formatted := sql
 
+	// Process keywords in order - longest first to avoid partial matches
 	for _, keyword := range sqlKeywords {
-		pattern := regexp.MustCompile(`(?i)\s+` + regexp.QuoteMeta(keyword) + `\s+`)
-		
+		// Match keyword with word boundaries, case-insensitive
+		pattern := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(keyword) + `\b`)
+
 		formatted = pattern.ReplaceAllStringFunc(formatted, func(match string) string {
-			return "\n" + strings.TrimSpace(match) + " "
+			// Only add line break if not already at start of line
+			if strings.HasPrefix(formatted[:strings.Index(formatted, match)], "\n") {
+				return match + " "
+			}
+			return "\n" + match + " "
 		})
 	}
 
@@ -57,9 +63,24 @@ func HighlightSQL(sql string) string {
 
 	highlighted := sql
 
+	// First, highlight compound keywords (multi-word)
+	compoundKeywords := []string{
+		"FULL OUTER JOIN", "LEFT OUTER JOIN", "RIGHT OUTER JOIN",
+		"LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL JOIN", "CROSS JOIN",
+		"INSERT INTO", "DELETE FROM", "GROUP BY", "ORDER BY",
+		"UNION ALL", "FETCH FIRST", "ROWS ONLY",
+	}
+
+	for _, keyword := range compoundKeywords {
+		pattern := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(keyword) + `\b`)
+		highlighted = pattern.ReplaceAllStringFunc(highlighted, func(match string) string {
+			return keywordStyle.Render(match)
+		})
+	}
+
+	// Then, highlight individual keywords
 	for _, keyword := range highlightKeywords {
 		pattern := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(keyword) + `\b`)
-		
 		highlighted = pattern.ReplaceAllStringFunc(highlighted, func(match string) string {
 			return keywordStyle.Render(match)
 		})

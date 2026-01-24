@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/eduardofuncao/pam/internal/config"
+	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/run"
 )
 
 func (a *App) handleExplore() {
@@ -53,7 +55,17 @@ func (a *App) handleExplore() {
 
 	var onRerun func(string)
 	onRerun = func(newSQL string) {
-		a.executeSelect(newSQL, tableName, conn, nil, false, onRerun)
+		run.ExecuteSelect(newSQL, tableName, run.ExecutionParams{
+			Query:        db.Query{Name: tableName, SQL: newSQL},
+			Connection:   conn,
+			Config:       a.config,
+			OnRerun:      onRerun,
+		})
 	}
-	a.executeSelect(sql, tableName, conn, nil, false, onRerun)
+	run.ExecuteSelect(sql, tableName, run.ExecutionParams{
+		Query:        db.Query{Name: tableName, SQL: sql},
+		Connection:   conn,
+		Config:       a.config,
+		OnRerun:      onRerun,
+	})
 }

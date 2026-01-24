@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/editor"
 	"github.com/eduardofuncao/pam/internal/styles"
 )
 
@@ -50,26 +51,16 @@ func (m Model) saveQuery() (tea.Model, tea.Cmd) {
 	}
 
 	// For unnamed queries, use editor to get the name
-	editorCmd := os.Getenv("EDITOR")
-	if editorCmd == "" {
-		editorCmd = "vim"
-	}
+	editorCmd := editor.GetEditorCommand()
+	instructions := "# Enter the name for this query\n# Lines starting with # will be ignored\n# Save and exit to confirm, or exit without saving to cancel\n"
 
-	tmpFile, err := os.CreateTemp("", "pam-query-name-*.txt")
+	tmpFile, err := editor.CreateTempFile("pam-query-name-", instructions)
 	if err != nil {
 		m.statusMessage = lipgloss.NewStyle().Foreground(lipgloss.Color("red")).Render("Error creating temp file")
 		return m, nil
 	}
 	tmpPath := tmpFile.Name()
-
-	// Write instructions to the file
-	instructions := "# Enter the name for this query\n# Lines starting with # will be ignored\n# Save and exit to confirm, or exit without saving to cancel\n"
-	if _, err := tmpFile.WriteString(instructions); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpPath)
-		m.statusMessage = lipgloss.NewStyle().Foreground(lipgloss.Color("red")).Render("Error writing to temp file")
-		return m, nil
-	}
+	defer os.Remove(tmpPath)
 	tmpFile.Close()
 
 	cmd := exec.Command(editorCmd, tmpPath)
@@ -82,8 +73,7 @@ func (m Model) saveQuery() (tea.Model, tea.Cmd) {
 			return saveQueryCompleteMsg{success: false, query: db.Query{}}
 		}
 
-		content, readErr := os.ReadFile(tmpPath)
-		os.Remove(tmpPath)
+		content, readErr := editor.ReadTempFile(tmpPath)
 
 		if readErr != nil {
 			return saveQueryCompleteMsg{success: false, query: db.Query{}}

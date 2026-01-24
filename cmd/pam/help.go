@@ -203,7 +203,7 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  pam add <query-name> [query]")
+		fmt.Println("  pam add <run-name> [query]")
 		fmt.Println()
 		section("Description")
 		fmt.Println(
@@ -222,7 +222,7 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println(styles.Faint.Render("Remove a saved query by name or ID."))
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  pam remove <query-name-or-id>")
+		fmt.Println("  pam remove <run-name-or-id>")
 		fmt.Println()
 		section("Examples")
 		fmt.Println("  pam remove list_users")

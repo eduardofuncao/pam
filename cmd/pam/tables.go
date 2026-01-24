@@ -8,6 +8,7 @@ import (
 
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
+	"github.com/eduardofuncao/pam/internal/run"
 	"github.com/eduardofuncao/pam/internal/spinner"
 	"github.com/eduardofuncao/pam/internal/table"
 )
@@ -74,28 +75,32 @@ func (a *App) handleTables() {
 			query.PrimaryKey = metadata.PrimaryKey
 		}
 
-		a.executeSelect(
+		run.ExecuteSelect(
 			query.SQL,
 			query.Name,
-			conn,
-			&query,
-			false,
-			func(editedSQL string) {
-				// Re-run query if edited
-				editedQuery := db.Query{
-					Name:      tableName,
-					SQL:       editedSQL,
-					TableName: tableName,
-					Id:        -1,
-				}
-				a.executeSelect(
-					editedSQL,
-					tableName,
-					conn,
-					&editedQuery,
-					true,
-					nil,
-				)
+			run.ExecutionParams{
+				Query:        query,
+				Connection:   conn,
+				Config:       a.config,
+				SaveCallback: a.saveQueryFromTable,
+				OnRerun: func(editedSQL string) {
+					// Re-run query if edited
+					editedQuery := db.Query{
+						Name:      tableName,
+						SQL:       editedSQL,
+						TableName: tableName,
+						Id:        -1,
+					}
+					run.ExecuteSelect(
+						editedSQL,
+						tableName,
+						run.ExecutionParams{
+							Query:      editedQuery,
+							Connection: conn,
+							Config:     a.config,
+						},
+					)
+				},
 			},
 		)
 		return
@@ -203,27 +208,31 @@ func (a *App) showTablesInteractive(
 				query.PrimaryKey = metadata.PrimaryKey
 			}
 
-			a.executeSelect(
+			run.ExecuteSelect(
 				query.SQL,
 				query.Name,
-				conn,
-				&query,
-				false,
-				func(editedSQL string) {
-					editedQuery := db.Query{
-						Name:      selectedTable,
-						SQL:       editedSQL,
-						TableName: selectedTable,
-						Id:        -1,
-					}
-					a.executeSelect(
-						editedSQL,
-						selectedTable,
-						conn,
-						&editedQuery,
-						true,
-						nil,
-					)
+				run.ExecutionParams{
+					Query:        query,
+					Connection:   conn,
+					Config:       a.config,
+					SaveCallback: a.saveQueryFromTable,
+					OnRerun: func(editedSQL string) {
+						editedQuery := db.Query{
+							Name:      selectedTable,
+							SQL:       editedSQL,
+							TableName: selectedTable,
+							Id:        -1,
+						}
+						run.ExecuteSelect(
+							editedSQL,
+							selectedTable,
+							run.ExecutionParams{
+								Query:      editedQuery,
+								Connection: conn,
+								Config:     a.config,
+							},
+						)
+					},
 				},
 			)
 			// After returning from table view, go back to tables list
