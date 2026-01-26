@@ -318,6 +318,64 @@ func (p *PostgresConnection) GetForeignKeys(tableName string) ([]ForeignKey, err
 	return foreignKeys, nil
 }
 
+func (p *PostgresConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	if p.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	var currentSchema string
+	schemaQuery := `SELECT current_schema()`
+	row := p.db.QueryRow(schemaQuery)
+	if err := row.Scan(&currentSchema); err != nil {
+		if p.Schema != "" {
+			currentSchema = p.Schema
+		} else {
+			currentSchema = "public"
+		}
+	}
+
+	// Find all foreign keys that reference this table (reverse direction)
+	query := `
+		SELECT
+			kcu.column_name,
+			tc.table_name AS foreign_table_name,
+			ccu.column_name AS foreign_column_name
+		FROM information_schema.table_constraints AS tc
+		JOIN information_schema.key_column_usage AS kcu
+			ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+		JOIN information_schema.constraint_column_usage AS ccu
+			ON ccu.constraint_name = tc.constraint_name
+			AND ccu.table_schema = tc.table_schema
+		WHERE tc.constraint_type = 'FOREIGN KEY'
+		  AND ccu.table_name = $1
+		  AND tc.table_schema = $2
+		ORDER BY tc.table_name, kcu.column_name
+	`
+
+	rows, err := p.db.Query(query, tableName, currentSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query referencing foreign keys: %w", err)
+	}
+	defer rows.Close()
+
+	var foreignKeys []ForeignKey
+	for rows.Next() {
+		var fk ForeignKey
+		// Note: We swap the meaning here
+		// fk.Column = the FK column in the other table
+		// fk.ReferencedTable = the other table (that has the FK)
+		// fk.ReferencedColumn = the PK column in this table being referenced
+		var otherColumn string
+		if err := rows.Scan(&otherColumn, &fk.ReferencedTable, &fk.ReferencedColumn); err == nil {
+			fk.Column = otherColumn
+			foreignKeys = append(foreignKeys, fk)
+		}
+	}
+
+	return foreignKeys, nil
+}
+
 func (p *PostgresConnection) BuildUpdateStatement(
 	tableName, columnName, currentValue, pkColumn, pkValue string,
 ) string {

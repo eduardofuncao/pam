@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/eduardofuncao/pam/internal/config"
 	"github.com/eduardofuncao/pam/internal/db"
 	"github.com/eduardofuncao/pam/internal/styles"
@@ -69,135 +70,141 @@ func (a *App) handleExplain() {
 	defer conn.Close()
 
 	tableName := args[0]
+
+	// Cache for FK lookups to improve performance
+	fkCache := make(map[string][]db.ForeignKey)
 	visited := make(map[string]bool)
-	tree := a.buildRelationshipTree(conn, tableName, flags.showColumns, flags.depth, 0, visited)
+
+	tree := a.buildRelationshipTree(conn, tableName, flags.depth, 0, visited, fkCache)
 
 	fmt.Println(tree)
 }
 
-type relationshipNode struct {
-	tableName      string
-	relationships  []relationship
-}
+type relationshipType int
+
+const (
+	belongsTo relationshipType = iota
+	hasMany
+)
 
 type relationship struct {
-	column           string
-	referencedTable  string
-	referencedColumn string
+	relType           relationshipType
+	column            string
+	referencedTable   string
+	referencedColumn  string
 }
 
-func (a *App) buildRelationshipTree(conn db.DatabaseConnection, tableName string, showColumns bool, maxDepth, currentDepth int, visited map[string]bool) string {
+func (a *App) buildRelationshipTree(conn db.DatabaseConnection, tableName string, maxDepth, currentDepth int, visited map[string]bool, fkCache map[string][]db.ForeignKey) string {
 	if currentDepth >= maxDepth {
 		return ""
 	}
 
-	node := &relationshipNode{
-		tableName: tableName,
+	var relationships []relationship
+
+	// Only show "belongs to" relationships (FKs from this table to other tables)
+	belongsToFKs, err := conn.GetForeignKeys(tableName)
+	if err == nil {
+		for _, fk := range belongsToFKs {
+			relationships = append(relationships, relationship{
+				relType:           belongsTo,
+				column:            fk.Column,
+				referencedTable:   fk.ReferencedTable,
+				referencedColumn:  fk.ReferencedColumn,
+			})
+		}
 	}
 
-	fks, err := conn.GetForeignKeys(tableName)
-	if err != nil {
-		return fmt.Sprintf("Error: %v", err)
-	}
-
-	for _, fk := range fks {
-		node.relationships = append(node.relationships, relationship{
-			column:           fk.Column,
-			referencedTable:  fk.ReferencedTable,
-			referencedColumn: fk.ReferencedColumn,
-		})
-	}
-
-	return a.renderNode(conn, node, showColumns, maxDepth, currentDepth, visited)
+	return a.renderNode(conn, tableName, relationships, maxDepth, currentDepth, visited, fkCache)
 }
 
-func (a *App) renderNode(conn db.DatabaseConnection, node *relationshipNode, showColumns bool, maxDepth, currentDepth int, visited map[string]bool) string {
+func (a *App) renderNode(conn db.DatabaseConnection, tableName string, relationships []relationship, maxDepth, currentDepth int, visited map[string]bool, fkCache map[string][]db.ForeignKey) string {
 	var builder strings.Builder
 
+	// Render current table with PK info
 	if currentDepth == 0 {
-		metadata, _ := conn.GetTableMetadata(node.tableName)
+		metadata, _ := conn.GetTableMetadata(tableName)
 		if len(metadata.PrimaryKeys) > 0 {
 			pks := strings.Join(metadata.PrimaryKeys, ", ")
-			builder.WriteString(styles.TableName.Render(node.tableName))
+			builder.WriteString(styles.TableName.Render(tableName))
 			builder.WriteString(" ")
-			builder.WriteString(styles.PrimaryKeyLabel.Render(fmt.Sprintf("[%s]", pks)))
+			builder.WriteString(styles.PrimaryKeyLabel.Render(fmt.Sprintf("(PK: %s)", pks)))
 		} else {
-			builder.WriteString(styles.TableName.Render(node.tableName))
+			builder.WriteString(styles.TableName.Render(tableName))
 		}
 		builder.WriteString("\n")
-	} else {
-		builder.WriteString(styles.TableName.Render(node.tableName) + "\n")
 	}
 
-	visited[node.tableName] = true
+	visited[tableName] = true
 
-	for i, rel := range node.relationships {
-		isLast := i == len(node.relationships)-1
+	for i, rel := range relationships {
+		isLast := i == len(relationships)-1
 		prefix := "├── "
 		if isLast {
 			prefix = "└── "
 		}
 
-		var columnInfo string
-		if showColumns {
-			columnInfo = fmt.Sprintf("%s → ", rel.column)
+		// Determine relationship type and styling
+		var relText, cardinality, fkDetails string
+		var relStyle lipgloss.Style
+
+		isSelfReference := (rel.referencedTable == tableName)
+
+		if rel.relType == belongsTo {
+			relText = "belongs to"
+			cardinality = "[N:1]"
+			relStyle = styles.BelongsToStyle
+			fkDetails = fmt.Sprintf("(FK: %s → %s.%s)", rel.column, rel.referencedTable, rel.referencedColumn)
+		} else {
+			relText = "has many"
+			cardinality = "[1:N]"
+			relStyle = styles.HasManyStyle
+			fkDetails = fmt.Sprintf("(on: %s ← %s.%s)", rel.referencedColumn, rel.referencedTable, rel.column)
 		}
 
-		cardinality := "[N:1]"
-		relStyle := styles.BelongsToStyle
-
+		// Render relationship line
 		builder.WriteString(styles.TreeConnector.Render(prefix))
-		builder.WriteString(columnInfo)
-		builder.WriteString(relStyle.Render("belongs to →"))
+		builder.WriteString(relStyle.Render(fmt.Sprintf("%s →", relText)))
 		builder.WriteString(" ")
 		builder.WriteString(styles.CardinalityStyle.Render(cardinality))
 		builder.WriteString(" ")
 		builder.WriteString(styles.TableName.Render(rel.referencedTable))
+		builder.WriteString(" ")
+		builder.WriteString(styles.Faint.Render(fkDetails))
+
+		if isSelfReference {
+			builder.WriteString(" " + styles.Faint.Render("(self-reference)"))
+		}
+
 		builder.WriteString("\n")
 
-		isSelfReference := (rel.referencedTable == node.tableName)
-
+		// Don't recurse into self-references
 		if isSelfReference {
 			continue
 		}
 
+		// Don't revisit tables
 		if visited[rel.referencedTable] {
 			continue
 		}
 
-		childNode := &relationshipNode{
-			tableName: rel.referencedTable,
-		}
-
-		childFks, err := conn.GetForeignKeys(rel.referencedTable)
-		if err != nil {
-			continue
-		}
-
-		for _, fk := range childFks {
-			childNode.relationships = append(childNode.relationships, relationship{
-				column:           fk.Column,
-				referencedTable:  fk.ReferencedTable,
-				referencedColumn: fk.ReferencedColumn,
-			})
-		}
-
+		// Build child relationships
 		childPrefix := "    "
 		if !isLast {
 			childPrefix = "│   "
 		}
 
-		childTree := a.renderNode(conn, childNode, showColumns, maxDepth, currentDepth+1, visited)
-		lines := strings.Split(childTree, "\n")
-
-		for j, line := range lines {
-			if line == "" {
-				continue
+		childTree := a.buildRelationshipTree(conn, rel.referencedTable, maxDepth, currentDepth+1, visited, fkCache)
+		if childTree != "" {
+			lines := strings.Split(childTree, "\n")
+			for j, line := range lines {
+				if line == "" {
+					continue
+				}
+				if j > 0 {
+					builder.WriteString(styles.TreeConnector.Render(childPrefix))
+				}
+				builder.WriteString(line + "\n")
 			}
-			if j > 0 {
-				builder.WriteString(styles.TreeConnector.Render(childPrefix))
-			}
-			builder.WriteString(line + "\n")
 		}
 	}
 

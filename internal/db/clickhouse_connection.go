@@ -185,6 +185,10 @@ func (c *ClickHouseConnection) GetForeignKeys(tableName string) ([]ForeignKey, e
 	return nil, fmt.Errorf("GetForeignKeys not implemented for clickhouse")
 }
 
+func (c *ClickHouseConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+}
+
 func (c *ClickHouseConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 

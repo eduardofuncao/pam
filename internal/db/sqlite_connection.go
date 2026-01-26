@@ -144,6 +144,10 @@ func (s *SQLiteConnection) GetForeignKeys(tableName string) ([]ForeignKey, error
 	return nil, fmt.Errorf("GetForeignKeys not implemented for sqlite")
 }
 
+func (s *SQLiteConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+}
+
 func (s *SQLiteConnection) BuildUpdateStatement(
 	tableName, columnName, currentValue, pkColumn, pkValue string,
 ) string {

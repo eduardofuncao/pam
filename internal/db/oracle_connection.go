@@ -252,6 +252,10 @@ func (oc *OracleConnection) GetForeignKeys(tableName string) ([]ForeignKey, erro
 	return nil, fmt.Errorf("GetForeignKeys not implemented for oracle")
 }
 
+func (oc *OracleConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+}
+
 
 func (oc *OracleConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")

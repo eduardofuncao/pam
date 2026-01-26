@@ -103,6 +103,10 @@ var (
 		Foreground(lipgloss.Color("218")). // Vivid Orange-1
 		Bold(true)
 
+	HasManyStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("86")). // Cyan
+		Bold(true)
+
 	CardinalityStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("228")). // Orange/Yellow
 		Bold(true)

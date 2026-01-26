@@ -187,6 +187,10 @@ func (s *SQLServerConnection) GetForeignKeys(tableName string) ([]ForeignKey, er
 	return nil, fmt.Errorf("GetForeignKeys not implemented for sqlserver")
 }
 
+func (s *SQLServerConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+}
+
 func (s *SQLServerConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	quotedTableName := fmt.Sprintf("%s", tableName)
 	quotedColumnName := fmt.Sprintf("%s", columnName)

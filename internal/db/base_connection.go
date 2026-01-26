@@ -60,6 +60,10 @@ func (b *BaseConnection) GetForeignKeys(tableName string) ([]ForeignKey, error) 
 	return nil, errors.New("GetForeignKeys() not implemented for base connection")
 }
 
+func (b *BaseConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, errors.New("GetForeignKeysReferencingTable() not implemented for base connection")
+}
+
 func (b *BaseConnection) BuildUpdateStatement(
 	tableName, columnName, currentValue, pkColumn, pkValue string,
 ) string {

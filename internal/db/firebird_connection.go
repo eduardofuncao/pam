@@ -147,6 +147,10 @@ func (f *FirebirdConnection) GetForeignKeys(tableName string) ([]ForeignKey, err
 	return nil, fmt.Errorf("GetForeignKeys not implemented for firebird")
 }
 
+func (f *FirebirdConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+}
+
 func (f *FirebirdConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
 	metadata := &TableMetadata{
 		TableName: tableName,

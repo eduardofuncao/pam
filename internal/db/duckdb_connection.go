@@ -174,3 +174,7 @@ package db
 // 	)
 // }
 //
+// func (d *DuckDBConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+// 	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+// }
+//

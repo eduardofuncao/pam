@@ -14,6 +14,7 @@ type DatabaseConnection interface {
 	GetViews() ([]string, error)
 	GetTableMetadata(tableName string) (*TableMetadata, error)
 	GetForeignKeys(tableName string) ([]ForeignKey, error)
+	GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error)
 	BuildUpdateStatement(
 		tableName, columnName, currentValue, pkColumn, pkValue string,
 	) string

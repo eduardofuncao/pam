@@ -160,6 +160,10 @@ func (m *MySQLConnection) GetForeignKeys(tableName string) ([]ForeignKey, error)
 	return nil, fmt.Errorf("GetForeignKeys not implemented for mysql")
 }
 
+func (m *MySQLConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+}
+
 func (m *MySQLConnection) BuildUpdateStatement(
 	tableName, columnName, currentValue, pkColumn, pkValue string,
 ) string {
