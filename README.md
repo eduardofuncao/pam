@@ -345,6 +345,26 @@ Manage multiple database connections and switch between them instantly.
 ```bash
 # List all connections
 pam list connections
+pam switch production
+```
+
+### Database Exploration
+
+Explore your database schema and visualize relationships between tables.
+
+```bash
+# List all tables and views in multi-column format
+pam explore
+
+# Query a table directly
+pam explore employees --limit 100
+
+# Visualize foreign key relationships
+pam explain employees
+pam explain employees --depth 2    # Show relationships 2 levels deep
+```
+
+**Note:** The `pam explain` command is currently a work in progress and may change in future versions.
 
 # Switch active connection
 pam switch mysql_prod
@@ -419,6 +439,14 @@ pam edit queries
 | `run --edit` | Edit query before running | `pam run users --edit` |
 | `run --last`, `-l` | Re-run last executed query | `pam run --last` |
 
+
+### Database Exploration
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `explore` | List all tables and views in multi-column format | `pam explore` |
+| `explore <table> [-l N]` | Query a table with optional row limit | `pam explore employees --limit 100` |
+| `explain <table> [-d N] [-c]` | Visualize foreign key relationships | `pam explain employees --depth 2` |
 
 ### Info
 

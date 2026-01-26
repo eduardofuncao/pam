@@ -71,6 +71,9 @@ func (a *App) PrintGeneralHelp() {
 		"  tables      " + styles.Faint.Render("List or query database tables"),
 	)
 	fmt.Println(
+		"  explore     " + styles.Faint.Render("Explore database schema"),
+	)
+	fmt.Println(
 		"  list        " + styles.Faint.Render("List connections or queries"),
 	)
 	fmt.Println(
@@ -411,6 +414,84 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  pam edit           # defaults to 'config'")
 		fmt.Println("  pam edit config")
 		fmt.Println("  pam edit queries")
+
+	case "explore":
+		section("Command: explore")
+		fmt.Println(
+			styles.Faint.Render(
+				"Explore your database schema and query tables interactively.",
+			),
+		)
+		fmt.Println()
+		section("Usage")
+		fmt.Println("  pam explore")
+		fmt.Println("  pam explore <table> [--limit | -l N]")
+		fmt.Println()
+		section("Description")
+		fmt.Println(
+			"  Without arguments, lists all tables and views in multi-column format.",
+		)
+		fmt.Println(
+			"  With a table name, queries the table and shows results in an",
+		)
+		fmt.Println("  interactive table view (similar to 'pam run').")
+		fmt.Println()
+		fmt.Println(
+			"  --limit, -l N  " + styles.Faint.Render(
+				"Limit number of rows returned (default: from config or 1000)",
+			),
+		)
+		fmt.Println()
+		section("Examples")
+		fmt.Println("  pam explore                  # list all tables and views")
+		fmt.Println("  pam explore employees        # query employees table")
+		fmt.Println("  pam explore orders -l 50     # query with 50 row limit")
+
+	case "explain":
+		section("Command: explain")
+		fmt.Println(
+			styles.Faint.Render(
+				"Visualize foreign key relationships between tables.",
+			),
+		)
+		fmt.Println()
+		fmt.Println(
+			styles.Faint.Render(
+				"  Note: This command is currently a work in progress and may change.",
+			),
+		)
+		fmt.Println()
+		section("Usage")
+		fmt.Println("  pam explain <table> [--depth | -d N]")
+		fmt.Println()
+		section("Description")
+		fmt.Println(
+			"  Shows a tree visualization of foreign key relationships for a table.",
+		)
+		fmt.Println("  Displays both 'belongs to' and 'has many' relationships.")
+		fmt.Println()
+		fmt.Println(
+			"  --depth, -d N  " + styles.Faint.Render(
+				"Show relationships up to N levels deep (default: 1)",
+			),
+		)
+		fmt.Println()
+		section("Relationship types")
+		fmt.Println(
+			"  belongs to [N:1]  " + styles.Faint.Render(
+				"FK from this table to another table",
+			),
+		)
+		fmt.Println(
+			"  has many [1:N]   " + styles.Faint.Render(
+				"FK from other tables to this table",
+			),
+		)
+		fmt.Println()
+		section("Examples")
+		fmt.Println("  pam explain employees")
+		fmt.Println("  pam explain employees --depth 2")
+		fmt.Println("  pam explain departments -d 3")
 
 	case "info":
 		section("Command: info")

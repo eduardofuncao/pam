@@ -13,14 +13,12 @@ import (
 )
 
 type explainFlags struct {
-	depth       int
-	showColumns bool
+	depth int
 }
 
 func parseExplainFlags() (explainFlags, []string) {
 	flags := explainFlags{
-		depth:       1, // Default to showing just direct relationships
-		showColumns: false,
+		depth: 1, // Default to showing just direct relationships
 	}
 	remainingArgs := []string{}
 	args := os.Args[2:]
@@ -34,8 +32,6 @@ func parseExplainFlags() (explainFlags, []string) {
 				}
 				i++ // Skip the next argument
 			}
-		} else if arg == "--columns" || arg == "-c" {
-			flags.showColumns = true
 		} else if !strings.HasPrefix(arg, "-") {
 			remainingArgs = append(remainingArgs, arg)
 		}
@@ -54,7 +50,7 @@ func (a *App) handleExplain() {
 	flags, args := parseExplainFlags()
 
 	if len(args) == 0 {
-		fmt.Println("Usage: pam explain [--depth|-d N] [--columns|-c] <table-name>")
+		fmt.Println("Usage: pam explain [--depth|-d N] <table-name>")
 		os.Exit(1)
 	}
 
