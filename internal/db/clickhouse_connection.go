@@ -140,7 +140,23 @@ func (c *ClickHouseConnection) GetTableMetadata(tableName string) (*TableMetadat
 		metadata.ColumnTypes = append(metadata.ColumnTypes, colType)
 	}
 
+	// ClickHouse doesn't support foreign key constraints (analytical DB)
+	// Return empty FK list gracefully
+	metadata.ForeignKeys = []ForeignKey{}
+
 	return metadata, nil
+}
+
+func (c *ClickHouseConnection) GetForeignKeys(tableName string) ([]ForeignKey, error) {
+	// ClickHouse doesn't support foreign key constraints
+	// Return empty list gracefully
+	return []ForeignKey{}, nil
+}
+
+func (c *ClickHouseConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
+	// ClickHouse doesn't support foreign key constraints
+	// Return empty list gracefully
+	return []ForeignKey{}, nil
 }
 
 func (c *ClickHouseConnection) GetInfoSQL(infoType string) string {
@@ -174,19 +190,63 @@ func (c *ClickHouseConnection) GetInfoSQL(infoType string) string {
 }
 
 func (c *ClickHouseConnection) GetTables() ([]string, error) {
-	return nil, fmt.Errorf("GetTables not implemented for clickhouse")
+	if c.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
+
+	query := `
+		SELECT name
+		FROM system.tables
+		WHERE database = currentDatabase()
+		  AND engine != 'View'
+		ORDER BY name
+	`
+
+	rows, err := c.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err == nil {
+			tables = append(tables, tableName)
+		}
+	}
+
+	return tables, nil
 }
 
 func (c *ClickHouseConnection) GetViews() ([]string, error) {
-	return nil, fmt.Errorf("GetViews not implemented for clickhouse")
-}
+	if c.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
 
-func (c *ClickHouseConnection) GetForeignKeys(tableName string) ([]ForeignKey, error) {
-	return nil, fmt.Errorf("GetForeignKeys not implemented for clickhouse")
-}
+	query := `
+		SELECT name
+		FROM system.tables
+		WHERE database = currentDatabase()
+		  AND engine = 'View'
+		ORDER BY name
+	`
 
-func (c *ClickHouseConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
-	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+	rows, err := c.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query views: %w", err)
+	}
+	defer rows.Close()
+
+	var views []string
+	for rows.Next() {
+		var viewName string
+		if err := rows.Scan(&viewName); err == nil {
+			views = append(views, viewName)
+		}
+	}
+
+	return views, nil
 }
 
 func (c *ClickHouseConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {

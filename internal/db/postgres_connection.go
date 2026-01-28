@@ -150,6 +150,12 @@ func (p *PostgresConnection) GetTableMetadata(
 		}
 	}
 
+	// Fetch foreign keys
+	fks, err := p.GetForeignKeys(tableName)
+	if err == nil {
+		metadata.ForeignKeys = fks
+	}
+
 	return metadata, nil
 }
 

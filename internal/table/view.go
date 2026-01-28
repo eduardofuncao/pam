@@ -98,7 +98,12 @@ func (m Model) renderHeader() string {
 			pkIcon = "⚿ "
 		}
 
-		columnDisplay := pkIcon + typeIcon + m.columns[j]
+		fkIcon := ""
+		if j < len(m.columnFKs) && m.columnFKs[j] != "" {
+			fkIcon = "⚭ "
+		}
+
+		columnDisplay := pkIcon + fkIcon + typeIcon + m.columns[j]
 		content := formatCell(columnDisplay, m.cellWidth)
 		cells = append(cells, styles.TableHeader.Render(content))
 	}
@@ -141,6 +146,7 @@ func (m Model) renderFooter() string {
 
 	currentCellValue := ""
 	columnType := ""
+	fkRef := ""
 
 	if m.selectedRow >= 0 && m.selectedRow < len(m.data) &&
 		m.selectedCol >= 0 && m.selectedCol < len(m.data[m.selectedRow]) {
@@ -151,14 +157,19 @@ func (m Model) renderFooter() string {
 		columnType = m.columnTypes[m.selectedCol]
 	}
 
-	maxPreviewWidth := m.width - len(columnType) - 10
+	if m.selectedCol >= 0 && m.selectedCol < len(m.columnFKs) && m.columnFKs[m.selectedCol] != "" {
+		fkRef = fmt.Sprintf(" FK → %s", m.columnFKs[m.selectedCol])
+	}
+
+	maxPreviewWidth := m.width - len(columnType) - len(fkRef) - 10
 	displayValue := currentCellValue
 	if len(displayValue) > maxPreviewWidth && maxPreviewWidth > 0 {
 		displayValue = displayValue[:maxPreviewWidth-3] + "..."
 	}
 
-	cellPreview := fmt.Sprintf("%s %s\n",
+	cellPreview := fmt.Sprintf("%s%s %s\n",
 		styles.Faint.Render(columnType),
+		styles.Faint.Render(fkRef),
 		styles.TableCell.Render(displayValue))
 
 	updateInfo := ""

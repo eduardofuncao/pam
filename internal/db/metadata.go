@@ -11,6 +11,7 @@ type TableMetadata struct {
 	PrimaryKeys  []string
 	ColumnTypes  []string
 	Columns      []string
+	ForeignKeys  []ForeignKey
 }
 
 type ForeignKey struct {
@@ -41,10 +42,6 @@ func ExtractTableNameFromSQL(sqlQuery string) string {
 
 // InferTableMetadata attempts to infer table metadata from a query
 func InferTableMetadata(conn DatabaseConnection, query Query) (*TableMetadata, error) {
-	if HasJoinClause(query.SQL) {
-		return nil, fmt.Errorf("update/delete operations are not supported for JOIN queries")
-	}
-
 	if query.TableName != "" {
 		metadata := &TableMetadata{
 			TableName: query.TableName,
@@ -63,6 +60,17 @@ func InferTableMetadata(conn DatabaseConnection, query Query) (*TableMetadata, e
 
 	tableName := ExtractTableNameFromSQL(query.SQL)
 	if tableName == "" {
+		// Check if this is a JOIN query
+		if HasJoinClause(query.SQL) {
+			// Try to extract the primary table from the JOIN
+			primaryTable := ExtractPrimaryTableFromJoin(query.SQL)
+			if primaryTable != "" && conn != nil {
+				// Get metadata for the primary table
+				return conn.GetTableMetadata(primaryTable)
+			}
+			// Return empty metadata for complex JOINs
+			return &TableMetadata{TableName: ""}, nil
+		}
 		return nil, fmt.Errorf("could not extract table name from query")
 	}
 
@@ -73,6 +81,43 @@ func InferTableMetadata(conn DatabaseConnection, query Query) (*TableMetadata, e
 	return &TableMetadata{
 		TableName: tableName,
 	}, nil
+}
+
+// ExtractPrimaryTableFromJoin attempts to identify the primary/updateable table in a JOIN query
+// For simple JOINs, returns the first table in the FROM clause
+func ExtractPrimaryTableFromJoin(sqlQuery string) string {
+	normalized := strings.Join(strings.Fields(strings.ToLower(sqlQuery)), " ")
+
+	// Extract FROM clause
+	fromPattern := regexp.MustCompile(`from\s+([^where^group^order^limit^;]+)`)
+	matches := fromPattern.FindStringSubmatch(normalized)
+	if len(matches) < 2 {
+		return ""
+	}
+
+	fromClause := strings.TrimSpace(matches[1])
+
+	// Split by JOIN to get the first table
+	// Handle various JOIN types
+	joinPattern := regexp.MustCompile(`\s+(?:inner|left|right|full|outer|cross)\s+join\s+`)
+	tables := joinPattern.Split(fromClause, -1)
+
+	// Get the first table (before any JOIN)
+	firstTable := strings.TrimSpace(tables[0])
+
+	// Remove any alias (e.g., "users u" or "users AS u")
+	tableParts := strings.Fields(firstTable)
+	if len(tableParts) > 0 {
+		// The first part should be the table name
+		tableName := tableParts[0]
+		// Clean up schema prefix if present (e.g., "public.users" -> "users")
+		if dotIdx := strings.LastIndex(tableName, "."); dotIdx != -1 {
+			tableName = tableName[dotIdx+1:]
+		}
+		return tableName
+	}
+
+	return ""
 }
 
 func HasJoinClause(sqlQuery string) bool {

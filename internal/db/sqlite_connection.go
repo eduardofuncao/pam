@@ -111,6 +111,12 @@ func (s *SQLiteConnection) GetTableMetadata(
 		}
 	}
 
+	// Fetch foreign keys
+	fks, err := s.GetForeignKeys(tableName)
+	if err == nil {
+		metadata.ForeignKeys = fks
+	}
+
 	return metadata, nil
 }
 
@@ -133,19 +139,152 @@ func (s *SQLiteConnection) GetInfoSQL(infoType string) string {
 }
 
 func (s *SQLiteConnection) GetTables() ([]string, error) {
-	return nil, fmt.Errorf("GetTables not implemented for sqlite")
+	if s.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
+
+	query := `
+		SELECT name
+		FROM sqlite_master
+		WHERE type = 'table'
+		  AND name NOT LIKE 'sqlite_%'
+		ORDER BY name
+	`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err == nil {
+			tables = append(tables, tableName)
+		}
+	}
+
+	return tables, nil
 }
 
 func (s *SQLiteConnection) GetViews() ([]string, error) {
-	return nil, fmt.Errorf("GetViews not implemented for sqlite")
+	if s.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
+
+	query := `
+		SELECT name
+		FROM sqlite_master
+		WHERE type = 'view'
+		ORDER BY name
+	`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query views: %w", err)
+	}
+	defer rows.Close()
+
+	var views []string
+	for rows.Next() {
+		var viewName string
+		if err := rows.Scan(&viewName); err == nil {
+			views = append(views, viewName)
+		}
+	}
+
+	return views, nil
 }
 
 func (s *SQLiteConnection) GetForeignKeys(tableName string) ([]ForeignKey, error) {
-	return nil, fmt.Errorf("GetForeignKeys not implemented for sqlite")
+	if s.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
+
+	// Use PRAGMA foreign_key_list to get FK information
+	query := fmt.Sprintf("PRAGMA foreign_key_list(%s)", tableName)
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query foreign keys: %w", err)
+	}
+	defer rows.Close()
+
+	var foreignKeys []ForeignKey
+	for rows.Next() {
+		var id, seq int
+		var table, from, to string
+		var onUpdate, onDelete, match string
+
+		if err := rows.Scan(&id, &seq, &table, &from, &to, &onUpdate, &onDelete, &match); err == nil {
+			foreignKeys = append(foreignKeys, ForeignKey{
+				Column:           from,
+				ReferencedTable:  table,
+				ReferencedColumn: to,
+			})
+		}
+	}
+
+	return foreignKeys, nil
 }
 
 func (s *SQLiteConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
-	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+	if s.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
+
+	// Get all user tables
+	tablesQuery := `
+		SELECT name
+		FROM sqlite_master
+		WHERE type = 'table'
+		  AND name NOT LIKE 'sqlite_%'
+		ORDER BY name
+	`
+
+	tablesRows, err := s.db.Query(tablesQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer tablesRows.Close()
+
+	var allTables []string
+	for tablesRows.Next() {
+		var tbl string
+		if err := tablesRows.Scan(&tbl); err == nil {
+			allTables = append(allTables, tbl)
+		}
+	}
+
+	// Check each table for FKs referencing the target table
+	var foreignKeys []ForeignKey
+	for _, tbl := range allTables {
+		query := fmt.Sprintf("PRAGMA foreign_key_list(%s)", tbl)
+		rows, err := s.db.Query(query)
+		if err != nil {
+			continue
+		}
+
+		for rows.Next() {
+			var id, seq int
+			var table, from, to string
+			var onUpdate, onDelete, match string
+
+			if err := rows.Scan(&id, &seq, &table, &from, &to, &onUpdate, &onDelete, &match); err == nil {
+				// Check if this FK references our target table
+				if strings.EqualFold(table, tableName) {
+					foreignKeys = append(foreignKeys, ForeignKey{
+						Column:           from,
+						ReferencedTable:  tbl,
+						ReferencedColumn: to,
+					})
+				}
+			}
+		}
+		rows.Close()
+	}
+
+	return foreignKeys, nil
 }
 
 func (s *SQLiteConnection) BuildUpdateStatement(

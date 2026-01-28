@@ -9,6 +9,7 @@ import (
 
 func Render(
 	columns []string,
+	columnTypes []string,
 	data [][]string,
 	elapsed time.Duration,
 	conn db.DatabaseConnection,
@@ -19,6 +20,7 @@ func Render(
 ) (Model, error) {
 	model := New(
 		columns,
+		columnTypes,
 		data,
 		elapsed,
 		conn,
@@ -44,7 +46,7 @@ func RenderTablesList(
 	query db.Query,
 	columnWidth int,
 ) (Model, error) {
-	model := New(columns, data, elapsed, conn, "", "", query, columnWidth)
+	model := New(columns, nil, data, elapsed, conn, "", "", query, columnWidth)
 	model.isTablesList = true
 	p := tea.NewProgram(model)
 	finalModel, err := p.Run()

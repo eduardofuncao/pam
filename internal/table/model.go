@@ -20,6 +20,7 @@ type Model struct {
 	visibleRows       int
 	columns           []string
 	columnTypes       []string
+	columnFKs         []string  // Maps column index to FK reference (e.g., "people.id")
 	data              [][]string
 	elapsed           time.Duration
 	blinkCopiedCell   bool
@@ -55,6 +56,7 @@ type blinkMsg struct{}
 
 func New(
 	columns []string,
+	passedColumnTypes []string,
 	data [][]string,
 	elapsed time.Duration,
 	conn db.DatabaseConnection,
@@ -63,7 +65,17 @@ func New(
 	columnWidth int,
 ) Model {
 	columnTypes := make([]string, len(columns))
-	if tableName != "" && conn != nil {
+
+	// Use passed column types from result set if available (works for JOINs, CTEs, etc.)
+	if passedColumnTypes != nil && len(passedColumnTypes) > 0 {
+		// Use types from SQL driver's ColumnTypes()
+		for i := range columns {
+			if i < len(passedColumnTypes) {
+				columnTypes[i] = passedColumnTypes[i]
+			}
+		}
+	} else if tableName != "" && conn != nil {
+		// Fallback to querying table metadata for single-table queries
 		metadata, err := conn.GetTableMetadata(tableName)
 
 		if err == nil && metadata != nil {
@@ -81,6 +93,27 @@ func New(
 		}
 	}
 
+	// Build FK map for display
+	columnFKs := make([]string, len(columns))
+	if tableName != "" && conn != nil {
+		metadata, err := conn.GetTableMetadata(tableName)
+		if err == nil && metadata != nil && len(metadata.ForeignKeys) > 0 {
+			// Build FK map with lowercase keys for case-insensitive lookup
+			// This handles databases like Firebird/Oracle that return uppercase metadata
+			fkMap := map[string]db.ForeignKey{}
+			for _, fk := range metadata.ForeignKeys {
+				fkMap[strings.ToLower(fk.Column)] = fk
+			}
+
+			// Map FKs to columns by index (case-insensitive matching)
+			for i, col := range columns {
+				if fk, ok := fkMap[strings.ToLower(col)]; ok {
+					columnFKs[i] = fk.ReferencedTable + "." + fk.ReferencedColumn
+				}
+			}
+		}
+	}
+
 	return Model{
 		selectedRow:      0,
 		selectedCol:      0,
@@ -88,6 +121,7 @@ func New(
 		offsetY:          0,
 		columns:          columns,
 		columnTypes:      columnTypes,
+		columnFKs:        columnFKs,
 		data:             data,
 		elapsed:          elapsed,
 		visualMode:       false,

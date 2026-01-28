@@ -136,19 +136,144 @@ func (f *FirebirdConnection) GetInfoSQL(infoType string) string {
 }
 
 func (f *FirebirdConnection) GetTables() ([]string, error) {
-	return nil, fmt.Errorf("GetTables not implemented for firebird")
+	if f.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	query := `
+		SELECT TRIM(RDB$RELATION_NAME) as name
+		FROM RDB$RELATIONS
+		WHERE RDB$VIEW_BLR IS NULL
+		  AND RDB$SYSTEM_FLAG = 0
+		ORDER BY RDB$RELATION_NAME
+	`
+
+	rows, err := f.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tables: %w", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err == nil {
+			tables = append(tables, tableName)
+		}
+	}
+
+	return tables, nil
 }
 
 func (f *FirebirdConnection) GetViews() ([]string, error) {
-	return nil, fmt.Errorf("GetViews not implemented for firebird")
+	if f.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	query := `
+		SELECT TRIM(RDB$RELATION_NAME) as name
+		FROM RDB$RELATIONS
+		WHERE RDB$VIEW_BLR IS NOT NULL
+		  AND RDB$SYSTEM_FLAG = 0
+		ORDER BY RDB$RELATION_NAME
+	`
+
+	rows, err := f.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query views: %w", err)
+	}
+	defer rows.Close()
+
+	var views []string
+	for rows.Next() {
+		var viewName string
+		if err := rows.Scan(&viewName); err == nil {
+			views = append(views, viewName)
+		}
+	}
+
+	return views, nil
 }
 
 func (f *FirebirdConnection) GetForeignKeys(tableName string) ([]ForeignKey, error) {
-	return nil, fmt.Errorf("GetForeignKeys not implemented for firebird")
+	if f.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	// Firebird foreign key query
+	query := `
+		SELECT
+			TRIM(RCONSEG.RDB$FIELD_NAME) as column_name,
+			TRIM(RREL.RDB$RELATION_NAME) as foreign_table,
+			TRIM(RPKEYSEG.RDB$FIELD_NAME) as foreign_column
+		FROM RDB$RELATION_CONSTRAINTS RCON
+		JOIN RDB$INDICES RIND ON RCON.RDB$INDEX_NAME = RIND.RDB$INDEX_NAME
+		JOIN RDB$INDEX_SEGMENTS RCONSEG ON RIND.RDB$INDEX_NAME = RCONSEG.RDB$INDEX_NAME
+		JOIN RDB$RELATION_CONSTRAINTS RREF ON RIND.RDB$FOREIGN_KEY = RREF.RDB$INDEX_NAME
+		JOIN RDB$INDICES RINDREF ON RREF.RDB$INDEX_NAME = RINDREF.RDB$INDEX_NAME
+		JOIN RDB$INDEX_SEGMENTS RPKEYSEG ON RINDREF.RDB$INDEX_NAME = RPKEYSEG.RDB$INDEX_NAME
+		JOIN RDB$RELATIONS RREL ON RREF.RDB$RELATION_NAME = RREL.RDB$RELATION_NAME
+		WHERE TRIM(RCON.RDB$RELATION_NAME) = ?
+		AND RCON.RDB$CONSTRAINT_TYPE = 'FOREIGN KEY'
+		ORDER BY RCONSEG.RDB$FIELD_POSITION
+	`
+
+	rows, err := f.db.Query(query, strings.ToUpper(tableName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query foreign keys: %w", err)
+	}
+	defer rows.Close()
+
+	var foreignKeys []ForeignKey
+	for rows.Next() {
+		var fk ForeignKey
+		if err := rows.Scan(&fk.Column, &fk.ReferencedTable, &fk.ReferencedColumn); err == nil {
+			foreignKeys = append(foreignKeys, fk)
+		}
+	}
+
+	return foreignKeys, nil
 }
 
 func (f *FirebirdConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
-	return []ForeignKey{}, fmt.Errorf("GetForeignKeysReferencingTable not implemented for this driver")
+	if f.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	// Find all foreign keys that reference this table (reverse direction)
+	query := `
+		SELECT
+			TRIM(RCONSEG.RDB$FIELD_NAME) as column_name,
+			TRIM(RREL.RDB$RELATION_NAME) as foreign_table,
+			TRIM(RPKEYSEG.RDB$FIELD_NAME) as foreign_column
+		FROM RDB$RELATION_CONSTRAINTS RCON
+		JOIN RDB$INDICES RIND ON RCON.RDB$INDEX_NAME = RIND.RDB$INDEX_NAME
+		JOIN RDB$INDEX_SEGMENTS RCONSEG ON RIND.RDB$INDEX_NAME = RCONSEG.RDB$INDEX_NAME
+		JOIN RDB$RELATION_CONSTRAINTS RREF ON RIND.RDB$FOREIGN_KEY = RREF.RDB$INDEX_NAME
+		JOIN RDB$INDICES RINDREF ON RREF.RDB$INDEX_NAME = RINDREF.RDB$INDEX_NAME
+		JOIN RDB$INDEX_SEGMENTS RPKEYSEG ON RINDREF.RDB$INDEX_NAME = RPKEYSEG.RDB$INDEX_NAME
+		JOIN RDB$RELATIONS RREL ON RCON.RDB$RELATION_NAME = RREL.RDB$RELATION_NAME
+		WHERE TRIM(RREF.RDB$RELATION_NAME) = ?
+		AND RCON.RDB$CONSTRAINT_TYPE = 'FOREIGN KEY'
+		ORDER BY RREL.RDB$RELATION_NAME, RCONSEG.RDB$FIELD_POSITION
+	`
+
+	rows, err := f.db.Query(query, strings.ToUpper(tableName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query referencing foreign keys: %w", err)
+	}
+	defer rows.Close()
+
+	var foreignKeys []ForeignKey
+	for rows.Next() {
+		var fk ForeignKey
+		// In this reverse query, the FK is in another table pointing to this table
+		if err := rows.Scan(&fk.Column, &fk.ReferencedTable, &fk.ReferencedColumn); err == nil {
+			foreignKeys = append(foreignKeys, fk)
+		}
+	}
+
+	return foreignKeys, nil
 }
 
 func (f *FirebirdConnection) GetTableMetadata(tableName string) (*TableMetadata, error) {
@@ -196,6 +321,12 @@ func (f *FirebirdConnection) GetTableMetadata(tableName string) (*TableMetadata,
 
 		metadata.Columns = append(metadata.Columns, colName)
 		metadata.ColumnTypes = append(metadata.ColumnTypes, dataType)
+	}
+
+	// Fetch foreign keys
+	fks, err := f.GetForeignKeys(tableName)
+	if err == nil {
+		metadata.ForeignKeys = fks
 	}
 
 	return metadata, nil

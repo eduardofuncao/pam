@@ -7,9 +7,25 @@ import (
 )
 
 func FormatTableData(rows *sql.Rows) (columns []string, data [][]string, err error) {
+	columns, _, data, err = FormatTableDataWithTypes(rows)
+	return columns, data, err
+}
+
+func FormatTableDataWithTypes(rows *sql.Rows) (columns []string, columnTypes []string, data [][]string, err error) {
 	columns, err = rows.Columns()
 	if err != nil {
 		log.Fatalf("Error getting columns: %v", err)
+	}
+
+	// Get column types from the result set
+	columnTypeObjects, err := rows.ColumnTypes()
+	if err != nil {
+		log.Fatalf("Error getting column types: %v", err)
+	}
+
+	columnTypes = make([]string, len(columns))
+	for i, ct := range columnTypeObjects {
+		columnTypes[i] = ct.DatabaseTypeName()
 	}
 
 	values := make([]any, len(columns))
@@ -41,7 +57,7 @@ func FormatTableData(rows *sql.Rows) (columns []string, data [][]string, err err
 	if err = rows.Err(); err != nil {
 		log.Fatalf("Error during iteration: %v", err)
 	}
-	return columns, data, nil
+	return columns, columnTypes, data, nil
 }
 
 func GetNextQueryId(queries map[string]Query) (id int) {

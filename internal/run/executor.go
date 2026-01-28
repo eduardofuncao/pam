@@ -64,7 +64,7 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	}
 
 	// Format the results
-	columns, data, err := db.FormatTableData(rows.(*stdlib.Rows))
+	columns, columnTypes, data, err := db.FormatTableDataWithTypes(rows.(*stdlib.Rows))
 	if err != nil {
 		done <- struct{}{}
 		printError("Could not format table data: %v", err)
@@ -95,7 +95,7 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	}
 
 	// Render the TUI
-	model, err := table.Render(columns, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.SaveCallback)
+	model, err := table.Render(columns, columnTypes, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.SaveCallback)
 	if err != nil {
 		printError("Error rendering table: %v", err)
 		return
