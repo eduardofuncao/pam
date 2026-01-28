@@ -73,8 +73,6 @@ func parseRunFlags() run.Flags {
 	return flags
 }
 
-// parseParameterFlags extracts --param value pairs from CLI
-// Returns map of parameter name -> value
 func parseParameterFlags() map[string]string {
 	paramValues := make(map[string]string)
 	args := os.Args[2:]
@@ -271,7 +269,6 @@ func (a *App) executeQueryWithParams(query db.Query, conn db.DatabaseConnection,
 }
 
 // processParameters handles parameter extraction, validation, and substitution
-// Returns processed SQL (with placeholders), args for prepared statements, and display SQL (with values)
 func (a *App) processParameters(sql string, conn db.DatabaseConnection, cliValues, positionals map[string]string) (string, []any, string) {
 	// Extract parameter definitions from SQL
 	paramDefs := params.ExtractParameters(sql)

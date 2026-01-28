@@ -83,8 +83,6 @@ func InferTableMetadata(conn DatabaseConnection, query Query) (*TableMetadata, e
 	}, nil
 }
 
-// ExtractPrimaryTableFromJoin attempts to identify the primary/updateable table in a JOIN query
-// For simple JOINs, returns the first table in the FROM clause
 func ExtractPrimaryTableFromJoin(sqlQuery string) string {
 	normalized := strings.Join(strings.Fields(strings.ToLower(sqlQuery)), " ")
 

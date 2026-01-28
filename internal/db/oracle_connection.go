@@ -80,12 +80,10 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 
 	upperTableName := strings.ToUpper(tableName)
 
-	// Get the current schema
 	var currentOwner string
 	ownerQuery := `SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') FROM DUAL`
 	row := oc.db.QueryRow(ownerQuery)
 	if err := row.Scan(&currentOwner); err != nil {
-		// fall back to the BaseConnection.Schema if set
 		if oc.Schema != "" {
 			currentOwner = strings.ToUpper(oc.Schema)
 		} else {
@@ -104,7 +102,6 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 		ORDER BY cols.position
 	`
 
-	// Add owner filter if we have it
 	if currentOwner != "" {
 		pkQuery = `
 			SELECT cols.column_name
@@ -123,7 +120,6 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 		TableName: tableName,
 	}
 
-	// Execute PK query
 	var rows *sql.Rows
 	var err error
 	if currentOwner != "" {
@@ -144,7 +140,6 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 		}
 	}
 
-	// Column metadata query
 	colQuery := `
 		SELECT column_name, data_type, data_length, data_precision, data_scale
 		FROM all_tab_columns
@@ -152,7 +147,6 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 		ORDER BY column_id
 	`
 
-	// Add owner filter if set
 	if currentOwner != "" {
 		colQuery = `
 			SELECT column_name, data_type, data_length, data_precision, data_scale
@@ -163,7 +157,6 @@ func (oc *OracleConnection) GetTableMetadata(tableName string) (*TableMetadata, 
 		`
 	}
 
-	// Execute column query
 	var colRows *sql.Rows
 	if currentOwner != "" {
 		colRows, err = oc.db.Query(colQuery, upperTableName, currentOwner)

@@ -4,9 +4,6 @@ import (
 	"fmt"
 )
 
-// ResolveParameters merges CLI values with defaults from SQL
-// Priority: CLI flags > defaults
-// Returns map of param name -> value
 func ResolveParameters(paramDefs, cliValues map[string]string) map[string]string {
 	result := make(map[string]string)
 
@@ -25,8 +22,6 @@ func ResolveParameters(paramDefs, cliValues map[string]string) map[string]string
 	return result
 }
 
-// GetMissingRequired finds parameters that have no value (empty string = required)
-// Returns list of param names that need user input
 func GetMissingRequired(paramDefs, currentValues map[string]string) []string {
 	var missing []string
 
@@ -42,8 +37,6 @@ func GetMissingRequired(paramDefs, currentValues map[string]string) []string {
 	return missing
 }
 
-// ValidateCLIValues checks if CLI-provided values are valid
-// Returns error if a CLI param doesn't exist in the query
 func ValidateCLIValues(cliValues, paramDefs map[string]string) error {
 	for name := range cliValues {
 		if _, exists := paramDefs[name]; !exists {
@@ -64,7 +57,6 @@ var reservedFlags = map[string]bool{
 	"v":       true,
 }
 
-// ValidateParamNames checks if parameter names conflict with reserved flags
 func ValidateParamNames(paramDefs map[string]string) error {
 	for name := range paramDefs {
 		if reservedFlags[name] {

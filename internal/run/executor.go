@@ -15,10 +15,8 @@ import (
 	"github.com/eduardofuncao/pam/internal/table"
 )
 
-// SaveQueryCallback is a function that saves a query and returns the saved query
 type SaveQueryCallback func(query db.Query) (db.Query, error)
 
-// ExecutionParams holds all parameters needed for query execution
 type ExecutionParams struct {
 	Query        db.Query
 	Connection   db.DatabaseConnection
@@ -29,8 +27,6 @@ type ExecutionParams struct {
 	DisplaySQL   string // Human-readable SQL with values substituted (for TUI display)
 }
 
-// ExecuteSelect executes SELECT queries and renders results
-// Used by both regular queries (with metadata) and info commands (without metadata)
 func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	start := time.Now()
 	done := make(chan struct{})
@@ -107,7 +103,6 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	}
 }
 
-// ExecuteNonSelect executes non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
 func ExecuteNonSelect(params ExecutionParams) {
 	start := time.Now()
 	done := make(chan struct{})
@@ -132,7 +127,6 @@ func ExecuteNonSelect(params ExecutionParams) {
 	fmt.Println(parser.HighlightSQL(params.Query.SQL))
 }
 
-// Execute routes to the appropriate executor based on query type
 func Execute(params ExecutionParams) {
 	if err := params.Connection.Open(); err != nil {
 		printError("Could not open connection to %s/%s: %s", params.Connection.GetDbType(), params.Connection.GetName(), err)
@@ -147,7 +141,6 @@ func Execute(params ExecutionParams) {
 	}
 }
 
-// extractMetadata extracts table metadata from a query
 func extractMetadata(conn db.DatabaseConnection, query db.Query) (string, string) {
 	metadata, err := db.InferTableMetadata(conn, query)
 	if err == nil && metadata != nil {

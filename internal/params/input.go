@@ -141,8 +141,6 @@ func (m InputModel) WasAborted() bool {
 	return m.aborted
 }
 
-// CollectParameters launches the TUI for parameter input
-// Returns map of param name -> value, or error if aborted
 func CollectParameters(sql string, missingParams []string, defaults map[string]string) (map[string]string, error) {
 	model := NewInputModel(sql, missingParams, defaults)
 	program := tea.NewProgram(model)

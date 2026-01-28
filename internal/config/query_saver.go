@@ -6,7 +6,6 @@ import (
 	"github.com/eduardofuncao/pam/internal/db"
 )
 
-// GetNextQueryId calculates the next available query ID
 func GetNextQueryId(queries map[string]db.Query) int {
 	maxID := 0
 	for _, q := range queries {
@@ -43,14 +42,12 @@ func (c *Config) SaveQueryToConnection(connName string, query db.Query) (db.Quer
 	return query, nil
 }
 
-// UpdateLastQuery updates the last query for a connection
 func (c *Config) UpdateLastQuery(connName string, query db.Query) error {
 	connData := c.Connections[connName]
 	connData.LastQuery = query
 	return c.Save()
 }
 
-// SaveQueryAndLast saves both the query and updates the last query in one operation
 func (c *Config) SaveQueryAndLast(connName string, query db.Query, saveAsLast bool) error {
 	connData := c.Connections[connName]
 

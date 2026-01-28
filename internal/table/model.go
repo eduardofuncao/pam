@@ -99,13 +99,11 @@ func New(
 		metadata, err := conn.GetTableMetadata(tableName)
 		if err == nil && metadata != nil && len(metadata.ForeignKeys) > 0 {
 			// Build FK map with lowercase keys for case-insensitive lookup
-			// This handles databases like Firebird/Oracle that return uppercase metadata
 			fkMap := map[string]db.ForeignKey{}
 			for _, fk := range metadata.ForeignKeys {
 				fkMap[strings.ToLower(fk.Column)] = fk
 			}
 
-			// Map FKs to columns by index (case-insensitive matching)
 			for i, col := range columns {
 				if fk, ok := fkMap[strings.ToLower(col)]; ok {
 					columnFKs[i] = fk.ReferencedTable + "." + fk.ReferencedColumn

@@ -8,8 +8,6 @@ import (
 	"github.com/eduardofuncao/pam/internal/db"
 )
 
-// SubstituteParameters replaces :param|default or :param syntax with DB-specific placeholders
-// Returns transformed SQL and ordered argument values for prepared statements
 func SubstituteParameters(sql string, paramValues map[string]string, conn db.DatabaseConnection) (string, []any, error) {
 	if len(paramValues) == 0 {
 		return sql, []any{}, nil
@@ -76,8 +74,6 @@ func replaceParamPlaceholders(sql string, conn db.DatabaseConnection, paramIndex
 	return result
 }
 
-// GenerateDisplaySQL creates a human-readable SQL string with actual parameter values substituted
-// This is for display purposes only (e.g., in TUI), not for execution
 func GenerateDisplaySQL(sql string, paramValues map[string]string) string {
 	// Find all :param|default or :param patterns
 	re := regexp.MustCompile(`:(\w+)(?:\|('(?:[^'\\]|\\.)*'|(?:[^'\s\\]+)))?`)
@@ -106,7 +102,6 @@ func GenerateDisplaySQL(sql string, paramValues map[string]string) string {
 	return result
 }
 
-// isNumeric checks if a string looks like a number
 func isNumeric(s string) bool {
 	if s == "" {
 		return false

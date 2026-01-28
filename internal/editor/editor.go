@@ -6,7 +6,6 @@ import (
 	"os/exec"
 )
 
-// GetEditorCommand returns the editor command from EDITOR env var, defaults to "vim"
 func GetEditorCommand() string {
 	editorCmd := os.Getenv("EDITOR")
 	if editorCmd == "" {
@@ -15,8 +14,6 @@ func GetEditorCommand() string {
 	return editorCmd
 }
 
-// EditTempFile opens an editor with the given content in a temp file
-// Returns the edited content, or error if editor fails or content is empty
 func EditTempFile(content, prefix string) (string, error) {
 	tmpFile, err := CreateTempFile(prefix, content)
 	if err != nil {
@@ -44,8 +41,6 @@ func EditTempFile(content, prefix string) (string, error) {
 	return editedContent, nil
 }
 
-// EditTempFileWithTemplate opens an editor with a template in a temp file
-// Returns the edited content with template instructions stripped
 func EditTempFileWithTemplate(template, prefix string) (string, error) {
 	editedContent, err := EditTempFile(template, prefix)
 	if err != nil {

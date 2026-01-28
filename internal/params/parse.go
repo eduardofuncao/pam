@@ -12,9 +12,6 @@ var (
 	paramRegex = regexp.MustCompile(`:(\w+)(?:\|('(?:[^'\\]|\\.)*'|(?:[^'\s\\]+)))?`)
 )
 
-// ExtractParameters finds all :param|default or :param patterns in SQL
-// Returns map of param name -> default value (empty string = required)
-// Ignores colons in string literals and SQL comments
 func ExtractParameters(sql string) map[string]string {
 	params := make(map[string]string)
 

@@ -4,9 +4,6 @@ import (
 	"strings"
 )
 
-// MapPositionalArgs maps positional argument values to parameter names
-// based on the order parameters appear in the SQL
-// Returns map of param name -> value
 func MapPositionalArgs(sql string, positionals []string) map[string]string {
 	result := make(map[string]string)
 

@@ -5,8 +5,6 @@ import (
 	"os"
 )
 
-// CreateTempFile creates a temp file with the given prefix and writes content to it
-// Returns the file handle (caller should close it), or error
 func CreateTempFile(prefix, content string) (*os.File, error) {
 	tmpFile, err := os.CreateTemp("", prefix+"*.sql")
 	if err != nil {
@@ -21,8 +19,6 @@ func CreateTempFile(prefix, content string) (*os.File, error) {
 	return tmpFile, nil
 }
 
-// ReadTempFile reads content from a temp file path
-// Returns the content as a string, or error
 func ReadTempFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

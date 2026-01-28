@@ -57,7 +57,6 @@ func ResolveQuery(flags Flags, cfg *config.Config, currentConn string, conn db.D
 	}, nil
 }
 
-// ShouldCreateNewQuery returns true if the resolved query indicates a new query should be created
 func ShouldCreateNewQuery(resolved ResolvedQuery) bool {
 	return resolved.Query.Name == "<new>" && resolved.Query.SQL == ""
 }

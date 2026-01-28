@@ -140,21 +140,17 @@ func (c *ClickHouseConnection) GetTableMetadata(tableName string) (*TableMetadat
 		metadata.ColumnTypes = append(metadata.ColumnTypes, colType)
 	}
 
-	// ClickHouse doesn't support foreign key constraints (analytical DB)
-	// Return empty FK list gracefully
 	metadata.ForeignKeys = []ForeignKey{}
 
 	return metadata, nil
 }
 
 func (c *ClickHouseConnection) GetForeignKeys(tableName string) ([]ForeignKey, error) {
-	// ClickHouse doesn't support foreign key constraints
 	// Return empty list gracefully
 	return []ForeignKey{}, nil
 }
 
 func (c *ClickHouseConnection) GetForeignKeysReferencingTable(tableName string) ([]ForeignKey, error) {
-	// ClickHouse doesn't support foreign key constraints
 	// Return empty list gracefully
 	return []ForeignKey{}, nil
 }
