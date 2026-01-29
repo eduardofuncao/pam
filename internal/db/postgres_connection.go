@@ -382,6 +382,51 @@ func (p *PostgresConnection) GetForeignKeysReferencingTable(tableName string) ([
 	return foreignKeys, nil
 }
 
+func (p *PostgresConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	if p.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	var currentSchema string
+	schemaQuery := `SELECT current_schema()`
+	row := p.db.QueryRow(schemaQuery)
+	if err := row.Scan(&currentSchema); err != nil {
+		if p.Schema != "" {
+			currentSchema = p.Schema
+		} else {
+			currentSchema = "public"
+		}
+	}
+
+	query := `
+		SELECT kcu.column_name
+		FROM information_schema.table_constraints AS tc
+		JOIN information_schema.key_column_usage AS kcu
+			ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+		WHERE tc.constraint_type = 'UNIQUE'
+		  AND tc.table_name = $1
+		  AND tc.table_schema = $2
+		ORDER BY kcu.column_name
+	`
+
+	rows, err := p.db.Query(query, tableName, currentSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query unique constraints: %w", err)
+	}
+	defer rows.Close()
+
+	var uniqueColumns []string
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err == nil {
+			uniqueColumns = append(uniqueColumns, column)
+		}
+	}
+
+	return uniqueColumns, nil
+}
+
 func (p *PostgresConnection) BuildUpdateStatement(
 	tableName, columnName, currentValue, pkColumn, pkValue string,
 ) string {

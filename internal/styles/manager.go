@@ -16,7 +16,7 @@ var (
 	TableSelected, TableHeader, TableCell, TableBorder lipgloss.Style
 	TableCopiedBlink, TableUpdated, TableDeleted lipgloss.Style
 	TableName, PrimaryKeyLabel lipgloss.Style
-	BelongsToStyle, HasManyStyle, CardinalityStyle, TreeConnector lipgloss.Style
+	BelongsToStyle, HasManyStyle, HasOneStyle, HasManyToManyStyle, CardinalityStyle, TreeConnector lipgloss.Style
 )
 
 // InitScheme initializes the color scheme from config
@@ -114,6 +114,14 @@ func reloadAllStyles() {
 
 	HasManyStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ActiveScheme.Accent)).
+		Bold(true)
+
+	HasOneStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ActiveScheme.Success)).
+		Bold(true)
+
+	HasManyToManyStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("13")). // Purple for N:N
 		Bold(true)
 
 	CardinalityStyle = lipgloss.NewStyle().

@@ -287,6 +287,54 @@ func (s *SQLiteConnection) GetForeignKeysReferencingTable(tableName string) ([]F
 	return foreignKeys, nil
 }
 
+func (s *SQLiteConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database not open")
+	}
+
+	// Get all indexes for this table
+	indexListQuery := fmt.Sprintf("PRAGMA index_list(%s)", tableName)
+	indexRows, err := s.db.Query(indexListQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query index list: %w", err)
+	}
+	defer indexRows.Close()
+
+	var uniqueColumns []string
+
+	for indexRows.Next() {
+		var seq int
+		var name, origin string
+		var partial int
+		var uniqueSql sql.NullString
+
+		if err := indexRows.Scan(&seq, &name, &uniqueSql, &origin, &partial); err != nil {
+			continue
+		}
+
+		// Check if this index is unique (uniqueSql will be "1" for unique indexes)
+		if uniqueSql.Valid && uniqueSql.String == "1" {
+			// Get the columns for this unique index
+			indexInfoQuery := fmt.Sprintf("PRAGMA index_info(%s)", name)
+			infoRows, err := s.db.Query(indexInfoQuery)
+			if err != nil {
+				continue
+			}
+
+			for infoRows.Next() {
+				var infoSeq, cid int
+				var colName string
+				if err := infoRows.Scan(&infoSeq, &cid, &colName); err == nil {
+					uniqueColumns = append(uniqueColumns, colName)
+				}
+			}
+			infoRows.Close()
+		}
+	}
+
+	return uniqueColumns, nil
+}
+
 func (s *SQLiteConnection) BuildUpdateStatement(
 	tableName, columnName, currentValue, pkColumn, pkValue string,
 ) string {

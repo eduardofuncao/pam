@@ -248,6 +248,51 @@ func (s *SQLServerConnection) GetForeignKeysReferencingTable(tableName string) (
 	return foreignKeys, nil
 }
 
+func (s *SQLServerConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	var currentSchema string
+	schemaQuery := `SELECT SCHEMA_NAME()`
+	row := s.db.QueryRow(schemaQuery)
+	if err := row.Scan(&currentSchema); err != nil {
+		if s.Schema != "" {
+			currentSchema = s.Schema
+		} else {
+			currentSchema = "dbo"
+		}
+	}
+
+	query := `
+		SELECT kcu.COLUMN_NAME
+		FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+		JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+			ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+			AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+		WHERE tc.CONSTRAINT_TYPE = 'UNIQUE'
+		  AND tc.TABLE_NAME = @p1
+		  AND tc.TABLE_SCHEMA = @p2
+		ORDER BY kcu.COLUMN_NAME
+	`
+
+	rows, err := s.db.Query(query, tableName, currentSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query unique constraints: %w", err)
+	}
+	defer rows.Close()
+
+	var uniqueColumns []string
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err == nil {
+			uniqueColumns = append(uniqueColumns, column)
+		}
+	}
+
+	return uniqueColumns, nil
+}
+
 func (s *SQLServerConnection) GetInfoSQL(infoType string) string {
 	schema := s.Schema
 	if schema == "" {

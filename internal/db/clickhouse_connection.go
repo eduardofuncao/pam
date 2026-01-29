@@ -155,6 +155,11 @@ func (c *ClickHouseConnection) GetForeignKeysReferencingTable(tableName string) 
 	return []ForeignKey{}, nil
 }
 
+func (c *ClickHouseConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	// ClickHouse doesn't support traditional FKs or UNIQUE constraints
+	return []string{}, nil
+}
+
 func (c *ClickHouseConnection) GetInfoSQL(infoType string) string {
 	database := c.Schema
 	if database == "" {

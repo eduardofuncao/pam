@@ -213,6 +213,44 @@ func (m *MySQLConnection) GetForeignKeysReferencingTable(tableName string) ([]Fo
 	return foreignKeys, nil
 }
 
+func (m *MySQLConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	if m.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	query := `
+		SELECT COLUMN_NAME
+		FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+		WHERE TABLE_NAME = ?
+		AND TABLE_SCHEMA = DATABASE()
+		AND CONSTRAINT_NAME <> 'PRIMARY'
+		AND CONSTRAINT_NAME IN (
+			SELECT CONSTRAINT_NAME
+			FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+			WHERE TABLE_NAME = ?
+			AND TABLE_SCHEMA = DATABASE()
+			AND CONSTRAINT_TYPE = 'UNIQUE'
+		)
+		ORDER BY COLUMN_NAME
+	`
+
+	rows, err := m.db.Query(query, tableName, tableName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query unique constraints: %w", err)
+	}
+	defer rows.Close()
+
+	var uniqueColumns []string
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err == nil {
+			uniqueColumns = append(uniqueColumns, column)
+		}
+	}
+
+	return uniqueColumns, nil
+}
+
 func (m *MySQLConnection) GetInfoSQL(infoType string) string {
 	switch infoType {
 	case "tables":

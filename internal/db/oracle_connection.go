@@ -439,6 +439,72 @@ func (oc *OracleConnection) GetForeignKeysReferencingTable(tableName string) ([]
 	return foreignKeys, nil
 }
 
+func (oc *OracleConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	if oc.db == nil {
+		return nil, fmt.Errorf("database is not open")
+	}
+
+	upperTableName := strings.ToUpper(tableName)
+
+	// Get the current schema
+	var currentOwner string
+	ownerQuery := `SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') FROM DUAL`
+	row := oc.db.QueryRow(ownerQuery)
+	if err := row.Scan(&currentOwner); err != nil {
+		if oc.Schema != "" {
+			currentOwner = strings.ToUpper(oc.Schema)
+		} else {
+			currentOwner = ""
+		}
+	}
+
+	query := `
+		SELECT DISTINCT cc.COLUMN_NAME
+		FROM ALL_CONSTRAINTS ac
+		JOIN ALL_CONS_COLUMNS cc
+			ON ac.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+			AND ac.OWNER = cc.OWNER
+		WHERE ac.CONSTRAINT_TYPE = 'U'
+		  AND ac.TABLE_NAME = :1
+		  AND cc.OWNER = :2
+		ORDER BY cc.POSITION
+	`
+
+	var rows *sql.Rows
+	var err error
+
+	if currentOwner != "" {
+		rows, err = oc.db.Query(query, upperTableName, currentOwner)
+	} else {
+		// If no schema specified, try without schema filter
+		queryWithoutSchema := `
+			SELECT DISTINCT cc.COLUMN_NAME
+			FROM ALL_CONSTRAINTS ac
+			JOIN ALL_CONS_COLUMNS cc
+				ON ac.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+				AND ac.OWNER = cc.OWNER
+			WHERE ac.CONSTRAINT_TYPE = 'U'
+			  AND ac.TABLE_NAME = :1
+			ORDER BY cc.POSITION
+		`
+		rows, err = oc.db.Query(queryWithoutSchema, upperTableName)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query unique constraints: %w", err)
+	}
+	defer rows.Close()
+
+	var uniqueColumns []string
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err == nil {
+			uniqueColumns = append(uniqueColumns, strings.TrimSpace(column))
+		}
+	}
+
+	return uniqueColumns, nil
+}
 
 func (oc *OracleConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")

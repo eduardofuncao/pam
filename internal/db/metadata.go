@@ -7,11 +7,12 @@ import (
 )
 
 type TableMetadata struct {
-	TableName    string
-	PrimaryKeys  []string
-	ColumnTypes  []string
-	Columns      []string
-	ForeignKeys  []ForeignKey
+	TableName         string
+	PrimaryKeys       []string
+	ColumnTypes       []string
+	Columns           []string
+	ForeignKeys       []ForeignKey
+	UniqueConstraints []string
 }
 
 type ForeignKey struct {

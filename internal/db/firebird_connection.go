@@ -336,6 +336,37 @@ func (f *FirebirdConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkVa
 	return fmt.Sprintf("DELETE FROM %s WHERE %s = '%s'", tableName, primaryKeyCol, pkValue)
 }
 
+func (f *FirebirdConnection) GetUniqueConstraints(tableName string) ([]string, error) {
+	if f.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+
+	query := `
+		SELECT TRIM(ICS.RDB$FIELD_NAME) as column_name
+		FROM RDB$RELATION_CONSTRAINTS RC
+		JOIN RDB$INDEX_SEGMENTS ICS ON RC.RDB$INDEX_NAME = ICS.RDB$INDEX_NAME
+		WHERE TRIM(RC.RDB$RELATION_NAME) = ?
+		AND RC.RDB$CONSTRAINT_TYPE = 'UNIQUE'
+		ORDER BY ICS.RDB$FIELD_POSITION
+	`
+
+	rows, err := f.db.Query(query, strings.ToUpper(tableName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query unique constraints: %w", err)
+	}
+	defer rows.Close()
+
+	var uniqueColumns []string
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err == nil {
+			uniqueColumns = append(uniqueColumns, column)
+		}
+	}
+
+	return uniqueColumns, nil
+}
+
 func (f *FirebirdConnection) GetPlaceholder(paramIndex int) string {
 	return "?"
 }
