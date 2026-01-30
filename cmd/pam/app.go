@@ -79,7 +79,7 @@ func (a *App) printUsage() {
 	fmt.Println(styles.Title.Render("Quick Start"))
 	fmt.Println(
 		"  1. Create a connection: " + styles.Faint.Render(
-			"pam init <name> <db-type> <connection-string>",
+			"pam init --name mydb --type postgres --conn \"postgres://localhost/db\"",
 		),
 	)
 	fmt.Println(

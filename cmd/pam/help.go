@@ -160,7 +160,15 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  pam init <name> <db-type> <connection-string> [schema]")
+		fmt.Println("  pam init [flags]")
+		fmt.Println("  pam init <name> <connection-string>          # type auto-inferred")
+		fmt.Println("  pam init <name> <db-type> <connection-string> [schema]  # legacy")
+		fmt.Println()
+		section("Flags")
+		fmt.Println("  --name, -n              Connection name")
+		fmt.Println("  --type, -t              Database type (optional, auto-inferred from conn)")
+		fmt.Println("  --conn-string, --conn, -c  Connection string")
+		fmt.Println("  --schema, -s            Schema (optional)")
 		fmt.Println()
 		section("Description")
 		fmt.Println(
@@ -168,15 +176,36 @@ func (a *App) PrintCommandHelp() {
 		)
 		fmt.Println("  - Saves the configuration if everything succeeds.")
 		fmt.Println(
-			"  - For Oracle databases, optionally specify a schema to set as default.",
+			"  - If any required parameter is missing, launches interactive TUI.",
 		)
+		fmt.Println(
+			"  - Database type is auto-inferred from connection string when possible",
+		)
+		fmt.Println("    (works in flag mode and 2-arg positional mode).")
+		fmt.Println("  - For Oracle databases, optionally specify a schema to set as default.")
 		fmt.Println()
 		section("Examples")
+		fmt.Println("  # Flag mode with auto-inference")
+		fmt.Println(
+			"  pam init --name dev --conn \"postgres://user:pass@localhost:5432/dbname\"",
+		)
+		fmt.Println()
+		fmt.Println("  # 2-arg positional with auto-inference")
+		fmt.Println(
+			"  pam init dev \"postgres://user:pass@localhost:5432/dbname\"",
+		)
+		fmt.Println()
+		fmt.Println("  # 3-arg positional (legacy, explicit type)")
 		fmt.Println(
 			"  pam init dev postgres \"postgres://user:pass@localhost:5432/dbname\"",
 		)
+		fmt.Println()
+		fmt.Println("  # Interactive mode")
+		fmt.Println("  pam init")
+		fmt.Println()
+		fmt.Println("  # With schema")
 		fmt.Println(
-			"  pam init prod sqlserver \"sqlserver://sa:password@localhost:1433?database=mydb\"",
+			"  pam init prod sqlserver \"sqlserver://sa:password@localhost:1433?database=mydb\" --schema public",
 		)
 		fmt.Println(
 			"  pam init staging mysql \"user:pass@tcp(127.0.0.1:3306)/dbname\"",
