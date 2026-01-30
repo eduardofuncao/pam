@@ -158,6 +158,11 @@ func (m Model) GetEditedQuery() db.Query {
 	return updatedQuery
 }
 
+func (m Model) SetStatusMessage(msg string) Model {
+	m.statusMessage = msg
+	return m
+}
+
 func (m Model) calculateHeaderLines() int {
 	titleLines := 1
 

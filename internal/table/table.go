@@ -17,6 +17,7 @@ func Render(
 	query db.Query,
 	columnWidth int,
 	saveCallback func(query db.Query) (db.Query, error),
+	initialStatus ...string,
 ) (Model, error) {
 	model := New(
 		columns,
@@ -29,7 +30,10 @@ func Render(
 		query,
 		columnWidth,
 	)
-  model.saveQueryCallback = saveCallback
+	model.saveQueryCallback = saveCallback
+	if len(initialStatus) > 0 && initialStatus[0] != "" {
+		model.statusMessage = initialStatus[0]
+	}
 	p := tea.NewProgram(model)
 	finalModel, err := p.Run()
 	if err != nil {

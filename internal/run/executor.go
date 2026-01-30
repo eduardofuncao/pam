@@ -27,7 +27,7 @@ type ExecutionParams struct {
 	DisplaySQL   string // Human-readable SQL with values substituted (for TUI display)
 }
 
-func ExecuteSelect(sql, queryName string, params ExecutionParams) {
+func ExecuteSelect(sql, queryName string, params ExecutionParams) error {
 	start := time.Now()
 	done := make(chan struct{})
 	go spinner.CircleWaitWithTimer(done)
@@ -55,16 +55,14 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	}
 	if err != nil {
 		done <- struct{}{}
-		printError("Could not execute query: %v", err)
-		return
+		return fmt.Errorf("query execution failed: %w", err)
 	}
 
 	// Format the results
 	columns, columnTypes, data, err := db.FormatTableDataWithTypes(rows.(*stdlib.Rows))
 	if err != nil {
 		done <- struct{}{}
-		printError("Could not format table data: %v", err)
-		return
+		return fmt.Errorf("formatting failed: %w", err)
 	}
 
 	done <- struct{}{}
@@ -73,7 +71,7 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	// Check for empty results
 	if len(data) == 0 {
 		fmt.Println("No results found")
-		return
+		return nil
 	}
 
 	// Create query object
@@ -93,14 +91,15 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) {
 	// Render the TUI
 	model, err := table.Render(columns, columnTypes, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.SaveCallback)
 	if err != nil {
-		printError("Error rendering table: %v", err)
-		return
+		return fmt.Errorf("error rendering table: %w", err)
 	}
 
 	// Handle re-run
 	if model.ShouldRerunQuery() && params.OnRerun != nil {
 		params.OnRerun(model.GetEditedQuery().SQL)
 	}
+
+	return nil
 }
 
 func ExecuteNonSelect(params ExecutionParams) {
@@ -127,17 +126,17 @@ func ExecuteNonSelect(params ExecutionParams) {
 	fmt.Println(parser.HighlightSQL(params.Query.SQL))
 }
 
-func Execute(params ExecutionParams) {
+func Execute(params ExecutionParams) error {
 	if err := params.Connection.Open(); err != nil {
-		printError("Could not open connection to %s/%s: %s", params.Connection.GetDbType(), params.Connection.GetName(), err)
-		return
+		return fmt.Errorf("could not open connection to %s/%s: %w", params.Connection.GetDbType(), params.Connection.GetName(), err)
 	}
 	defer params.Connection.Close()
 
 	if IsSelectQuery(params.Query.SQL) {
-		ExecuteSelect(params.Query.SQL, params.Query.Name, params)
+		return ExecuteSelect(params.Query.SQL, params.Query.Name, params)
 	} else {
 		ExecuteNonSelect(params)
+		return nil
 	}
 }
 

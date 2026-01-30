@@ -193,8 +193,7 @@ func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection) {
 		Config:       a.config,
 		SaveCallback: a.saveQueryFromTable,
 		OnRerun: func(editedSQL string) {
-			// Re-run callback - for now, just execute directly without parameters
-			// If user edits the SQL, they're modifying the substituted SQL
+			// Re-run callback - execute edited SQL
 			editedQuery := db.Query{
 				Name: originalQuery.Name,
 				SQL:  editedSQL,
@@ -205,6 +204,9 @@ func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection) {
 				Connection:   conn,
 				Config:       a.config,
 				SaveCallback: a.saveQueryFromTable,
+				OnRerun: func(sql string) {
+					a.executeQuery(editedQuery, conn)
+				},
 			})
 		},
 	})
@@ -263,6 +265,9 @@ func (a *App) executeQueryWithParams(query db.Query, conn db.DatabaseConnection,
 				SaveCallback: a.saveQueryFromTable,
 				Args:         finalArgs,
 				DisplaySQL:   finalDisplaySQL,
+				OnRerun: func(sql string) {
+					a.executeQueryWithParams(originalQuery, conn, paramFlags, positionalArgs)
+				},
 			})
 		},
 	})
