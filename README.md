@@ -1,17 +1,17 @@
 <div align="center">
 
 <h1>
-    <img src="https://github.com/user-attachments/assets/ba9b84d3-860b-4225-bf34-34572d4833e0" alt="Pam logo" height="45" style="vertical-align: middle;"/> 
-  Pam's Database Drawer
+    <img src="https://github.com/user-attachments/assets/ba9b84d3-860b-4225-bf34-34572d4833e0" alt="Squix logo" height="45" style="vertical-align: middle;"/>
+  Squix's SQL Stash
   <img width="auto" height="45" alt="bitmap" src="https://github.com/user-attachments/assets/c4dd1637-3e8d-45e8-8196-0d8b48324265" />
 </h1>
 <img width="363" height="120" alt="image" src="https://github.com/user-attachments/assets/4495a407-4897-4b22-8b5e-6ac8a9340ca5" />
 
 
 
-### *"Pam, the receptionist, has been doing a fantastic job."*
+### *"Squixy, the database squirrel, has been doing a fantastic job."*
 
-> **Michael Scott:** "You know what's amazing? Pam. Pam is amazing. She's got this drawer - not just any drawer - a database drawer. Full of SQL queries. I didn't even know we needed that, but apparently everyone does because they keep asking her for them. 'Pam, I need the users query.' 'Pam, where's that sales report?' And she just opens the drawer and boom. There it is. I think it's the most popular drawer in the entire office. Maybe even in Scranton. Possibly Pennsylvania."
+> **Bear Grylls:** "Here in the wild database forest, survival comes down to one thing: preparation. And Squixy? He's extraordinary. Watch this - he's gathered queries, cached them with incredible precision. When other animals are scrambling to write SQL from scratch, Squixy's already got the answer. He's so efficient he'll make you squint, but he can squeeze results out of anything. A true survivor."
 
 ---
 
@@ -35,7 +35,7 @@
 </h2>
 
 
-![pam-demo](https://github.com/user-attachments/assets/b62bec1d-2255-4d02-9b7f-1c99afbeb664)
+![squix-demo](https://github.com/user-attachments/assets/b62bec1d-2255-4d02-9b7f-1c99afbeb664)
 
 ### Highlights
 
@@ -54,17 +54,17 @@
 </h2>
 
 ### Installation
-Go to [the releases page](https://github.com/eduardofuncao/pam/releases) and find the correct version for your system. Download it and make sure the file is executable and moved to a directory in your $PATH.
+Go to [the releases page](https://github.com/eduardofuncao/squix/releases) and find the correct version for your system. Download it and make sure the file is executable and moved to a directory in your $PATH.
 
 
 <details>
 <summary>Go install</summary>
 
-Use go to install `pam` directly
+Use go to install `squix` directly
 ```bash
-go install github.com/eduardofuncao/pam/cmd/pam@latest
+go install github.com/eduardofuncao/squix/cmd/squix@latest
 ```
-this will put the binary `pam` in your $GOBIN path (usually `~/go/bin`)
+this will put the binary `squix` in your $GOBIN path (usually `~/go/bin`)
 </details>
 
 <details>
@@ -72,33 +72,33 @@ this will put the binary `pam` in your $GOBIN path (usually `~/go/bin`)
 
 Follow these instructions to build the project locally
 ```bash
-git clone https://github.com/eduardofuncao/pam
+git clone https://github.com/eduardofuncao/squix
 
-go build -o pam ./cmd/pam
+go build -o squix ./cmd/squix
 ```
-The pam binary will be available in the root project directory
+The squix binary will be available in the root project directory
 </details>
 
 <details>
 <summary>Nix / NixOS (Flake)</summary>
 
-Pam is available as a Nix flake for easy installation on NixOS and systems with
+Squix is available as a Nix flake for easy installation on NixOS and systems with
 Nix.
 
 
 #### Run directly without installing
 ```bash
-nix run github:eduardofuncao/pam
+nix run github:eduardofuncao/squix
 ```
 
 #### Install to user profile
 ```bash
-nix profile install github:eduardofuncao/pam
+nix profile install github:eduardofuncao/squix
 ```
 
 #### Enter development shell
 ```bash
-nix develop github:eduardofuncao/pam
+nix develop github:eduardofuncao/squix
 ```
 
 #### NixOS System-wide
@@ -111,17 +111,17 @@ description = "My NixOS config";
 
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  pam.url = "github:eduardofuncao/pam";
+  squix.url = "github:eduardofuncao/squix";
 };
 
-outputs = { self, nixpkgs, pam, ... }: {
+outputs = { self, nixpkgs, squix, ... }: {
   nixosConfigurations.myHostname = nixpkgs.lib.nixosSystem {
     system = "x86_64-linux";
     modules = [
       {
         nixpkgs.config.allowUnfree = true;
         environment.systemPackages = [
-          pam.packages.x86_64-linux.default
+          squix.packages.x86_64-linux.default
         ];
       }
     ];
@@ -140,17 +140,17 @@ Add to your home.nix or flake config:
 {
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nix-unstable";
-  pam.url = "github:eduardofuncao/pam";
+  squix.url = "github:eduardofuncao/squix";
 };
 
-outputs = { self, nixpkgs, pam, ... }: {
+outputs = { self, nixpkgs, squix, ... }: {
   homeConfigurations."username" = {
     pkgs = nixpkgs.legacyPackages.x86_64-linux;
     modules = [
       {
         nixpkgs.config.allowUnfree = true;
         home.packages = [
-          pam.packages.x86_64-linux.default
+          squix.packages.x86_64-linux.default
         ];
       }
     ];
@@ -168,19 +168,19 @@ Note: Oracle support requires `allowUnfree = true` in your Nix configuration.
 
 ```bash
 # Create your first connection (PostgreSQL example)
-pam init mydb postgres "postgresql://user:pass@localhost:5432/mydb"
+squix init mydb postgres "postgresql://user:pass@localhost:5432/mydb"
 
 # Add a saved query
-pam add list_users "SELECT * FROM users"
+squix add list_users "SELECT * FROM users"
 
 # List your saved queries
-pam list queries
+squix list queries
 
 # Run it, this opens the interactive table viewer
-pam run list_users
+squix run list_users
 
 # Or run inline SQL
-pam run "SELECT * FROM products WHERE price > 100"
+squix run "SELECT * FROM products WHERE price > 100"
 ```
 
 ### Navigating the Table
@@ -216,7 +216,7 @@ q          # Quit back to terminal
     Configuration
 </h2>
 
-Pam stores its configuration at `~/.config/pam/config.yaml`.
+Squix stores its configuration at `~/.config/squix/config.yaml`.
 
 ### Row Limit `default_row_limit: 1000`
 All queries are automatically limited to prevent fetching massive result sets. Configure via `default_row_limit` in config or use explicit `LIMIT` in your SQL queries.
@@ -245,53 +245,53 @@ Examples of init/create commands to start working with different database types
 ### PostgreSQL
 
 ```bash
-pam init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable
+squix init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable
 
 # or connect to a specific schema:
-pam init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable schema-name
+squix init pg-prod postgres postgres://myuser:mypassword@localhost:5432/mydb?sslmode=disable schema-name
 ```
 
 ### MySQL / MariaDB
 
 ```bash
-pam init mysql-dev mysql 'myuser:mypassword@tcp(127.0.0.1:3306)/mydb'
+squix init mysql-dev mysql 'myuser:mypassword@tcp(127.0.0.1:3306)/mydb'
 
-pam init mariadb-docker mariadb "root:MyStrongPass123@tcp(localhost:3306)/dundermifflin"
+squix init mariadb-docker mariadb "root:MyStrongPass123@tcp(localhost:3306)/forestgrove"
 ```
 
 ### SQL Server
 
 
 ```bash
-pam init sqlserver-docker sqlserver "sqlserver://sa:MyStrongPass123@localhost:1433/master"
+squix init sqlserver-docker sqlserver "sqlserver://sa:MyStrongPass123@localhost:1433/master"
 ```
 
 ### SQLite
 
 ```bash
-pam init sqlite-local sqlite file:///home/eduardo/dbeesly/sqlite/mydb.sqlite
+squix init sqlite-local sqlite file:///home/eduardo/dbeesly/sqlite/mydb.sqlite
 ```
 
 ### Oracle
 
 ```bash
-pam init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1
+squix init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1
 
 # or connect to a specific schema:
-pam init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1 schema-name
+squix init oracle-stg oracle myuser/mypassword@localhost:1521/XEPDB1 schema-name
 ```
 > Make sure you have the [Oracle Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html) or equivalent installed in your system
 
 ### ClickHouse
 
 ```bash
-pam init clickhouse-docker clickhouse "clickhouse://myuser:mypassword@localhost:9000/dundermifflin"
+squix init clickhouse-docker clickhouse "clickhouse://myuser:mypassword@localhost:9000/forestgrove"
 ```
 
 ### FireBird
 
 ```bash
-pam init firebird-docker firebird user:masterkey@localhost:3050//var/lib/firebird/data/the_office
+squix init firebird-docker firebird user:masterkey@localhost:3050//var/lib/firebird/data/the_office
 ```
 
 ---
@@ -316,36 +316,36 @@ Save, organize, and execute your SQL queries with ease.
 
 ```bash
 # Add queries with auto-incrementing IDs
-pam add daily_report "SELECT * FROM sales WHERE date = CURRENT_DATE"
-pam add user_count "SELECT COUNT(*) FROM users"
-pam add employees "SELECT TOP 10 * FROM employees ORDER BY last_name"
+squix add daily_report "SELECT * FROM sales WHERE date = CURRENT_DATE"
+squix add user_count "SELECT COUNT(*) FROM users"
+squix add employees "SELECT TOP 10 * FROM employees ORDER BY last_name"
 
 # Add parameterized queries with :param|default syntax
-pam add emp_by_salary "SELECT * FROM employees WHERE salary > :min_sal|30000"
-pam add search_users "SELECT * FROM users WHERE name LIKE :name|P% AND status = :status|active"
+squix add emp_by_salary "SELECT * FROM employees WHERE salary > :min_sal|30000"
+squix add search_users "SELECT * FROM users WHERE name LIKE :name|P% AND status = :status|active"
 
-# When creating queries with params and not default, pam will prompt you for the param value every time you run the query
-pam add search_by_name "SELECT * FROM employees where first_name = :name"
+# When creating queries with params and not default, squix will prompt you for the param value every time you run the query
+squix add search_by_name "SELECT * FROM employees where first_name = :name"
 
 # Run parameterized queries with named parameters (order doesn't matter!)
-pam run emp_by_salary --min_sal 50000
-pam run search_users --name Michael --status active
+squix run emp_by_salary --min_sal 50000
+squix run search_users --name Michael --status active
 # Or use positional args (must match SQL order)
-pam run search_users Michael active
+squix run search_users Michael active
 
 # List all saved queries
-pam list queries
+squix list queries
 
 # Search for specific queries
-pam list queries emp    # Finds queries with 'emp' in name or SQL
-pam list queries employees --oneline # displays each query in one line
+squix list queries emp    # Finds queries with 'emp' in name or SQL
+squix list queries employees --oneline # displays each query in one line
 
 # Run by name or ID
-pam run daily_report
-pam run 2
+squix run daily_report
+squix run 2
 
 # Edit query before running (great for testing parameter values)
-pam run emp_by_salary --edit
+squix run emp_by_salary --edit
 ```
 
 <img width="1166" height="687" alt="image" src="https://github.com/user-attachments/assets/6f05c2dc-aa48-49ca-ab68-fdf3cfcc4eae" />
@@ -369,12 +369,12 @@ Manage multiple database connections and switch between them instantly.
 
 ```bash
 # List all connections
-pam list connections
-pam switch production
+squix list connections
+squix switch production
 ```
 Display current connection and check if it is reachable
 ```
-pam status
+squix status
 ```
 <div align=center>
   <img width="425" height="503" alt="image" src="https://github.com/user-attachments/assets/e291de99-3c03-4e2a-b559-dcbbb89dc232" />
@@ -386,19 +386,19 @@ Explore your database schema and visualize relationships between tables.
 
 ```bash
 # List all tables and views in multi-column format
-pam explore
+squix explore
 
 # Query a table directly
-pam explore employees --limit 100
+squix explore employees --limit 100
 
 # Visualize foreign key relationships
-pam explain employees
-pam explain employees --depth 2    # Show relationships 2 levels deep
+squix explain employees
+squix explain employees --depth 2    # Show relationships 2 levels deep
 ```
 
 <img width="855" height="171" alt="image" src="https://github.com/user-attachments/assets/e824e87d-d3b3-4a1a-9850-cc041cf94216" />
 
-**Note:** The `pam explain` command is currently a work in progress and may change in future versions.
+**Note:** The `squix explain` command is currently a work in progress and may change in future versions.
 
 
 
@@ -407,7 +407,7 @@ pam explain employees --depth 2    # Show relationships 2 levels deep
 
 ### Editor Integration
 
-Pam uses your `$EDITOR` environment variable for editing queries and UPDATE/DELETE statements.
+Squix uses your `$EDITOR` environment variable for editing queries and UPDATE/DELETE statements.
 
 <div align=center>
   <img width="448" height="238" alt="image" src="https://github.com/user-attachments/assets/f416f41a-8ec3-4a35-86e7-0bba6596f75f" />
@@ -424,16 +424,16 @@ You can also use the editor to edit queries before running them
 
 ```bash
 # Edit existing query before running
-pam run daily_report --edit
+squix run daily_report --edit
 
 # Create and run a new query on the fly
-pam run
+squix run
 
 # Re-run the last executed query
-pam run --last
+squix run --last
 
 # Edit all queries at once
-pam edit queries
+squix edit queries
 ```
 
 ---
@@ -447,49 +447,49 @@ pam edit queries
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `create <name> <type> <conn-string> [schema]` | Create new database connection | `pam create mydb postgres "postgresql://..."` |
-| `switch <name>` | Switch to a different connection | `pam switch production` |
-| `status` | Show current active connection | `pam status` |
-| `list connections` | List all configured connections | `pam list connections` |
+| `create <name> <type> <conn-string> [schema]` | Create new database connection | `squix create mydb postgres "postgresql://..."` |
+| `switch <name>` | Switch to a different connection | `squix switch production` |
+| `status` | Show current active connection | `squix status` |
+| `list connections` | List all configured connections | `squix list connections` |
 
 ### Query Operations
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `add <name> [sql]` | Add a new saved query | `pam add users "SELECT * FROM users"` |
-| `remove <name\|id>` | Remove a saved query | `pam remove users` or `pam remove 3` |
-| `list queries` | List all saved queries | `pam list queries` |
-| `list queries --oneline` | lists each query in one line | `pam list -o` |
-| `list queries <searchterm>` | lists queries containing search term | `pam list employees` |
-| `run <name\|id\|sql>` | Execute a query | `pam run users` or `pam run 2` |
-| `run` | Create and run a new query | `pam run` |
-| `run --edit` | Edit query before running | `pam run users --edit` |
-| `run --last`, `-l` | Re-run last executed query | `pam run --last` |
-| `run --param` | run with named params | `pam run --name Pam` |
+| `add <name> [sql]` | Add a new saved query | `squix add users "SELECT * FROM users"` |
+| `remove <name\|id>` | Remove a saved query | `squix remove users` or `squix remove 3` |
+| `list queries` | List all saved queries | `squix list queries` |
+| `list queries --oneline` | lists each query in one line | `squix list -o` |
+| `list queries <searchterm>` | lists queries containing search term | `squix list employees` |
+| `run <name\|id\|sql>` | Execute a query | `squix run users` or `squix run 2` |
+| `run` | Create and run a new query | `squix run` |
+| `run --edit` | Edit query before running | `squix run users --edit` |
+| `run --last`, `-l` | Re-run last executed query | `squix run --last` |
+| `run --param` | run with named params | `squix run --name Squixy` |
 
 
 ### Database Exploration
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `explore` | List all tables and views in multi-column format | `pam explore` |
-| `explore <table> [-l N]` | Query a table with optional row limit | `pam explore employees --limit 100` |
-| `explain <table> [-d N] [-c]` | Visualize foreign key relationships | `pam explain employees --depth 2` |
+| `explore` | List all tables and views in multi-column format | `squix explore` |
+| `explore <table> [-l N]` | Query a table with optional row limit | `squix explore employees --limit 100` |
+| `explain <table> [-d N] [-c]` | Visualize foreign key relationships | `squix explain employees --depth 2` |
 
 ### Info
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `info tables` | List all tables from current schema | `pam info tables` |
-| `info views` | List all views from current schema | `pam info views` |
+| `info tables` | List all tables from current schema | `squix info tables` |
+| `info views` | List all views from current schema | `squix info views` |
 
 ### Configuration
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `edit config` | Edit main configuration file | `pam edit config` |
-| `edit queries` | Edit all queries for current connection | `pam edit queries` |
-| `help [command]` | Show help information | `pam help run` |
+| `edit config` | Edit main configuration file | `squix edit config` |
+| `edit queries` | Edit all queries for current connection | `squix edit queries` |
+| `help [command]` | Show help information | `squix help run` |
 
 ---
 
@@ -563,7 +563,7 @@ Press `y` to copy the selection as plain text, or `x` to export the selected dat
 
 > This project is currently in beta, please report unexpected behavior through the issues tab
 
-### v0.1.0 Ryan 📎
+### v0.1.0 Acorn 🌰
 - [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle, SQL Server, ClickHouse)
 - [x] Query library with save/edit/remove functionality
 - [x] Interactive TUI with Vim navigation
@@ -576,14 +576,14 @@ Press `y` to copy the selection as plain text, or `x` to export the selected dat
 - [x] Row limit configuration option
 - [x] Info command, list all tables/views in current connection
 
-### v0.2.0 - Kelly 👗
+### v0.2.0 - Walnut
 - [x] Program colors configuration option
-- [x] Query parameter with prompt and defaults (e.g., `WHERE first_name = :name|Pam`)
+- [x] Query parameter with prompt and defaults (e.g., `WHERE first_name = :name|Squixy`)
 - [x] CSV/JSON export for multiple cells
 - [x] Display column types correctly for join queries
-- [x] `pam explore` and `pam explain`
+- [x] `squix explore` and `squix explain`
 
-### v0.3.0 - Jim 👔
+### v0.3.0 - Hazelnut
 - [ ] Shell autocomplete (bash, fish, zsh)
 - [ ] Encryption on connection username/password in config file
 - [ ] Dynamic column width
@@ -603,7 +603,7 @@ Thanks a lot to all the contributors:
 
 ## Acknowledgments
 
-Pam wouldn't exist without the inspiration and groundwork laid by these fantastic projects:
+Squix wouldn't exist without the inspiration and groundwork laid by these fantastic projects:
 
 - **[naggie/dstask](https://github.com/naggie/dstask)** - For the elegant CLI design patterns and file-based data storage approach
 - **[DeprecatedLuar/better-curl-saul](https://github.com/DeprecatedLuar/better-curl-saul)** - For demonstrating a simple and genius approach to making a CLI tool
@@ -624,11 +624,11 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 <div align="center">
 
-**Made with 👚 by [@eduardofuncao](https://github.com/eduardofuncao)**
+**Made with 🐿️ by [@eduardofuncao](https://github.com/eduardofuncao)**
 
-> *"I don't think it would be the worst thing if it didn't work out...  Wait, can I say that?"* - Pam Beesly (definitely NOT about Pam's Database Drawer)
+> *"I don't think it would be the worst thing if it didn't work out...  Wait, can I say that?"* - Squixy the Squirrel (definitely NOT about Squix's SQL Stash)
 
-<img width="320" height="224" alt="Pam mascot" src="https://github.com/user-attachments/assets/f995ce07-3742-4e98-b737-bbdbf982012e" />
+<img width="320" height="224" alt="Squixy mascot" src="https://github.com/user-attachments/assets/f995ce07-3742-4e98-b737-bbdbf982012e" />
 
 
 </div>
