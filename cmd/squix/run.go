@@ -245,7 +245,10 @@ func (a *App) executeQueryWithParams(query db.Query, conn db.DatabaseConnection,
 			if strings.Contains(editedSQL, ":") {
 				// User kept the parameter syntax, re-process with same params
 				finalSQL, finalArgs, finalDisplaySQL = a.processParameters(originalQuery.SQL, conn, paramFlags, positionalArgs)
-			}
+}
+		if finalDisplaySQL == "" {
+			finalDisplaySQL = finalSQL
+		}
 
 			editedQuery := db.Query{
 				Name: originalQuery.Name,

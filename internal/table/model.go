@@ -39,6 +39,7 @@ type Model struct {
 	shouldRerunQuery  bool
 	editedQuery       string
 	lastExecutedQuery string
+	displaySQL        string
 	cellWidth         int
 	detailViewMode    bool
 	detailViewContent string
