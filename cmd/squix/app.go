@@ -61,7 +61,9 @@ func (a *App) Run() {
 	case "tables", "t":
 		a.handleTables()
 	case "disconnect", "clear", "unset":
-		a.handleDisconnect()
+		a.handleEdit()
+	case "config":
+		a.handleConfig()
 	case "explain":
 		a.handleExplain()
 	case "help":

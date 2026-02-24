@@ -83,7 +83,12 @@ func (a *App) PrintGeneralHelp() {
 	)
 	fmt.Println(
 		"  edit        " + styles.Faint.Render(
-			"Open config or queries in your editor",
+			"Edit queries in your editor",
+		),
+	)
+fmt.Println(
+		"  config      " + styles.Faint.Render(
+			"Edit the main configuration file",
 		),
 	)
 	fmt.Println(
@@ -424,29 +429,45 @@ func (a *App) PrintCommandHelp() {
 		section("Command: edit")
 		fmt.Println(
 			styles.Faint.Render(
-				"Open squix's configuration or queries in your editor.",
+				"Edit queries in your editor.",
 			),
 		)
 		fmt.Println()
 		section("Usage")
-		fmt.Println("  squix edit [config | queries]")
+		fmt.Println("  squix edit [<query-name-or-id>]")
 		fmt.Println()
 		section("Description")
 		fmt.Println(
-			"  config   " + styles.Faint.Render(
-				"Edit the main configuration file (connections etc.).",
-			),
+			"  - Opens the editor to modify queries for the current connection.",
 		)
+		fmt.Println("    - With no arguments: opens all queries in one file")
+		fmt.Println("    - With query name/id: edits a single query")
+		fmt.Println("    - Query name can be changed by editing the '-- queryname' header")
+		fmt.Println("  - Requires an active connection (use 'squix switch').")
+		fmt.Println()
+		section("Examples")
+		fmt.Println("  squix edit                    # edit all queries")
+		fmt.Println("  squix edit list_users         # edit single query")
+		fmt.Println("  squix edit 3                  # edit query by ID")
+	case "config":
+		section("Command: config")
 		fmt.Println(
-			"  queries  " + styles.Faint.Render(
-				"Edit all queries for the current connection in one file.",
+			styles.Faint.Render(
+				"Edit the main configuration file.",
 			),
 		)
 		fmt.Println()
+		section("Usage")
+		fmt.Println("  squix config")
+		fmt.Println()
+		section("Description")
+		fmt.Println(
+			"  Opens the configuration file (~/.config/squix/config.yaml) in your editor.",
+		)
+		fmt.Println("  Allows you to edit connections, color schemes, and other settings.")
+		fmt.Println()
 		section("Examples")
-		fmt.Println("  squix edit           # defaults to 'config'")
-		fmt.Println("  squix edit config")
-		fmt.Println("  squix edit queries")
+		fmt.Println("  squix config")
 
 	case "explore":
 		section("Command: explore")
