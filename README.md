@@ -1,7 +1,6 @@
 <div align="center">
-
 <h1>
-    <img src="https://github.com/user-attachments/assets/ba9b84d3-860b-4225-bf34-34572d4833e0" alt="Squix logo" height="45" style="vertical-align: middle;"/>
+  <img width="auto" height="45" alt="image" src="https://github.com/user-attachments/assets/f82ceec8-9fc7-4253-9ec0-f5548c646996" />
   Squix's SQL Stash
   <img width="auto" height="45" alt="bitmap" src="https://github.com/user-attachments/assets/c4dd1637-3e8d-45e8-8196-0d8b48324265" />
 </h1>
