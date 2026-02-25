@@ -2,7 +2,8 @@
 <h1>
   <img width="auto" height="45" alt="image" src="https://github.com/user-attachments/assets/f82ceec8-9fc7-4253-9ec0-f5548c646996" />
   Squix's SQL Stash
-  <img width="auto" height="45" alt="bitmap" src="https://github.com/user-attachments/assets/c4dd1637-3e8d-45e8-8196-0d8b48324265" />
+<img width="auto" height="36" alt="image" src="https://github.com/user-attachments/assets/c128f28f-dd10-4213-9915-dedafe7ae831" />
+
 </h1>
 <img width="363" height="120" alt="image" src="https://github.com/user-attachments/assets/4495a407-4897-4b22-8b5e-6ac8a9340ca5" />
 
