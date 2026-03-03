@@ -9,7 +9,7 @@ import (
 	"github.com/eduardofuncao/squix/internal/styles"
 )
 
-const Version = "v0.2.0"
+const Version = "v0.3.0"
 
 type App struct {
 	config *config.Config
