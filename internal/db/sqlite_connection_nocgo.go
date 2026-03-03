@@ -63,3 +63,83 @@ func (oc *SQLiteConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkVal
 func (oc *SQLiteConnection) GetPlaceholder(paramIndex int) string {
 	return "?"
 }
+
+func (oc *SQLiteConnection) GetTables() ([]string, error) {
+	return nil, fmt.Errorf("SQLite driver not available: binary built without CGO")
+}
+
+func (oc *SQLiteConnection) GetViews() ([]string, error) {
+	return nil, fmt.Errorf("SQLite driver not available: binary built without CGO")
+}
+
+func (oc *SQLiteConnection) GetForeignKeys(table string) ([]ForeignKey, error) {
+	return nil, fmt.Errorf("SQLite driver not available: binary built without CGO")
+}
+
+func (oc *SQLiteConnection) GetForeignKeysReferencingTable(table string) ([]ForeignKey, error) {
+	return nil, fmt.Errorf("SQLite driver not available: binary built without CGO")
+}
+
+func (oc *SQLiteConnection) GetUniqueConstraints(table string) ([]string, error) {
+	return nil, fmt.Errorf("SQLite driver not available: binary built without CGO")
+}
+
+func (oc *SQLiteConnection) GetName() string {
+	if oc.BaseConnection != nil {
+		return oc.BaseConnection.Name
+	}
+	return ""
+}
+
+func (oc *SQLiteConnection) GetDbType() string {
+	if oc.BaseConnection != nil {
+		return oc.BaseConnection.DbType
+	}
+	return ""
+}
+
+func (oc *SQLiteConnection) GetConnString() string {
+	if oc.BaseConnection != nil {
+		return oc.BaseConnection.ConnString
+	}
+	return ""
+}
+
+func (oc *SQLiteConnection) GetSchema() string {
+	if oc.BaseConnection != nil {
+		return oc.BaseConnection.Schema
+	}
+	return ""
+}
+
+func (oc *SQLiteConnection) GetQueries() map[string]Query {
+	if oc.BaseConnection != nil {
+		return oc.BaseConnection.Queries
+	}
+	return nil
+}
+
+func (oc *SQLiteConnection) GetLastQuery() Query {
+	if oc.BaseConnection != nil {
+		return oc.BaseConnection.LastQuery
+	}
+	return Query{}
+}
+
+func (oc *SQLiteConnection) SetSchema(schema string) {
+	if oc.BaseConnection != nil {
+		oc.BaseConnection.Schema = schema
+	}
+}
+
+func (oc *SQLiteConnection) SetLastQuery(query Query) {
+	if oc.BaseConnection != nil {
+		oc.BaseConnection.LastQuery = query
+	}
+}
+
+func (oc *SQLiteConnection) SetQueries(queries map[string]Query) {
+	if oc.BaseConnection != nil {
+		oc.BaseConnection.Queries = queries
+	}
+}
