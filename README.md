@@ -596,6 +596,7 @@ Thanks a lot to all the contributors:
 
 <a href="https://github.com/DeprecatedLuar"><img src="https://github.com/DeprecatedLuar.png" width="40" /></a>
 <a href="https://github.com/caiolandgraf"><img src="https://github.com/caiolandgraf.png" width="40" /></a>
+<a href="https://github.com/g4brielklein"><img src="https://github.com/g4brielklein.png" width="40" /></a>
 <a href="https://github.com/eduardofuncao"><img src="https://github.com/eduardofuncao.png" width="40" /></a>
 
 
