@@ -624,8 +624,6 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 **Made with 🐿️ by [@eduardofuncao](https://github.com/eduardofuncao)**
 
-> *"I don't think it would be the worst thing if it didn't work out...  Wait, can I say that?"* - Squix the Squirrel (definitely NOT about Squix's SQL Stash)
-
 <img width="320" height="224" alt="Squix mascot" src="https://github.com/user-attachments/assets/f995ce07-3742-4e98-b737-bbdbf982012e" />
 
 Previously Pam's Database Drawer, thanks to [u/marrsd](https://www.reddit.com/user/marrsd/) for suggesting the new name!
