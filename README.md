@@ -561,30 +561,17 @@ Press `y` to copy the selection as plain text, or `x` to export the selected dat
 
 > This project is currently in beta, please report unexpected behavior through the issues tab
 
-### v0.1.0 Acorn 🌰
-- [x] Multi-database support (PostgreSQL, MySQL, SQLite, Oracle, SQL Server, ClickHouse)
-- [x] Query library with save/edit/remove functionality
-- [x] Interactive TUI with Vim navigation
-- [x] In-place cell updates and row deletion
-- [x] Visual selection and copy (single and multi cell)
-- [x] Syntax highlighting
-- [x] Query editing in external editor
-- [x] Primary key detection
-- [x] Column type indicators
-- [x] Row limit configuration option
-- [x] Info command, list all tables/views in current connection
+### v0.3.0 - Squix 🐿️
+- [x] Edit command overhaul
+- [x] Delete connections with remove command
+- [x] Full project rename
 
-### v0.2.0 - Walnut 🧱
-- [x] Program colors configuration option
-- [x] Query parameter with prompt and defaults (e.g., `WHERE first_name = :name|Squix`)
-- [x] CSV/JSON export for multiple cells
-- [x] Display column types correctly for join queries
-- [x] `squix explore` and `squix explain`
-
-### v0.3.0 - Hazelnut 🪴
+### v0.4.0 - Acorn 🌰
 - [ ] Shell autocomplete (bash, fish, zsh)
 - [ ] Encryption on connection username/password in config file
 - [ ] Dynamic column width
+- [ ] Duckdb support
+- [ ] Update to bubbletea v2
 
 ---
 
