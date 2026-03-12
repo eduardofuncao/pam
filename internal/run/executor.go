@@ -89,7 +89,7 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) error {
 	}
 
 	// Render the TUI
-	model, err := table.Render(columns, columnTypes, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.SaveCallback)
+	model, err := table.Render(columns, columnTypes, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.Config.UIVisibility, params.SaveCallback)
 	if err != nil {
 		return fmt.Errorf("error rendering table: %w", err)
 	}

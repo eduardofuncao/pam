@@ -20,10 +20,21 @@ type Config struct {
 	History               History                     `yaml:"history"`
 	DefaultRowLimit       int                         `yaml:"default_row_limit"`
 	DefaultColumnWidth    int                         `yaml:"default_column_width"`
+	UIVisibility          UIVisibility                `yaml:"ui_visibility"`
 }
 
 type History struct {
 	Size int `yaml:"size"`
+}
+
+type UIVisibility struct {
+	QueryName         bool `yaml:"query_name"`
+	QuerySQL          bool `yaml:"query_sql"`
+	TypeDisplay       bool `yaml:"type_display"`
+	KeyIcons          bool `yaml:"key_icons"`
+	FooterCellContent bool `yaml:"footer_cell_content"`
+	FooterStats       bool `yaml:"footer_stats"`
+	FooterKeymaps     bool `yaml:"footer_keymaps"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -38,6 +49,15 @@ func LoadConfig(path string) (*Config, error) {
 				History:            History{},
 				DefaultRowLimit:    1000,
 				DefaultColumnWidth: 15,
+				UIVisibility: UIVisibility{
+					QueryName:         true,
+					QuerySQL:          true,
+					TypeDisplay:       true,
+					KeyIcons:          true,
+					FooterCellContent: true,
+					FooterStats:       true,
+					FooterKeymaps:     true,
+				},
 			}
 			err := cfg.Save()
 			if err != nil {
@@ -58,6 +78,21 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if cfg.DefaultRowLimit == 0 {
 		cfg.DefaultRowLimit = 1000
+	}
+
+	// Set UI visibility defaults (all true by default)
+	if !cfg.UIVisibility.QueryName && !cfg.UIVisibility.QuerySQL &&
+		!cfg.UIVisibility.TypeDisplay && !cfg.UIVisibility.KeyIcons &&
+		!cfg.UIVisibility.FooterCellContent && !cfg.UIVisibility.FooterStats &&
+		!cfg.UIVisibility.FooterKeymaps {
+		// All false means config is unset, use defaults
+		cfg.UIVisibility.QueryName = true
+		cfg.UIVisibility.QuerySQL = true
+		cfg.UIVisibility.TypeDisplay = true
+		cfg.UIVisibility.KeyIcons = true
+		cfg.UIVisibility.FooterCellContent = true
+		cfg.UIVisibility.FooterStats = true
+		cfg.UIVisibility.FooterKeymaps = true
 	}
 
 	return &cfg, nil

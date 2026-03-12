@@ -184,6 +184,7 @@ func (a *App) showTablesInteractive(
 			conn,
 			q,
 			a.config.DefaultColumnWidth,
+			a.config.UIVisibility,
 		)
 		if err != nil {
 			printError("Error rendering tables: %v", err)

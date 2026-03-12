@@ -27,22 +27,26 @@ func (m Model) View() string {
 	var b strings.Builder
 
 	// Display query name header
-	b.WriteString(styles.Title.Render("◆ " + m.currentQuery.Name))
-	b.WriteString("\n")
-
-	// Show the last executed query (for updates) or the current query (for selects)
-	var queryToDisplay string
-	if m.lastExecutedQuery != "" {
-		queryToDisplay = m.lastExecutedQuery
-	} else {
-		queryToDisplay = m.currentQuery.SQL
+	if m.uiVisibility.QueryName {
+		b.WriteString(styles.Title.Render("◆ " + m.currentQuery.Name))
+		b.WriteString("\n")
 	}
 
-	// Format and highlight the SQL
-	formattedSQL := parser.FormatSQLWithLineBreaks(queryToDisplay)
-	highlightedSQL := parser.HighlightSQL(formattedSQL)
-	b.WriteString(highlightedSQL)
-	b.WriteString("\n")
+	// Show the last executed query (for updates) or the current query (for selects)
+	if m.uiVisibility.QuerySQL {
+		var queryToDisplay string
+		if m.lastExecutedQuery != "" {
+			queryToDisplay = m.lastExecutedQuery
+		} else {
+			queryToDisplay = m.currentQuery.SQL
+		}
+
+		// Format and highlight the SQL
+		formattedSQL := parser.FormatSQLWithLineBreaks(queryToDisplay)
+		highlightedSQL := parser.HighlightSQL(formattedSQL)
+		b.WriteString(highlightedSQL)
+		b.WriteString("\n")
+	}
 
 	// Add separator line
 	separatorWidth := 0
@@ -88,18 +92,18 @@ func (m Model) renderHeader() string {
 
 	for j := m.offsetX; j < endCol; j++ {
 		typeIcon := ""
-		if j < len(m.columnTypes) && m.columnTypes[j] != "" {
+		if m.uiVisibility.TypeDisplay && j < len(m.columnTypes) && m.columnTypes[j] != "" {
 			typeIcon = getTypeIcon(m.columnTypes[j]) + " "
 		}
 
 		pkIcon := ""
-		if m.primaryKeyCol != "" && j < len(m.columns) &&
+		if m.uiVisibility.KeyIcons && m.primaryKeyCol != "" && j < len(m.columns) &&
 			m.columns[j] == m.primaryKeyCol {
 			pkIcon = "⚿ "
 		}
 
 		fkIcon := ""
-		if j < len(m.columnFKs) && m.columnFKs[j] != "" {
+		if m.uiVisibility.KeyIcons && j < len(m.columnFKs) && m.columnFKs[j] != "" {
 			fkIcon = "⚭ "
 		}
 
@@ -144,100 +148,103 @@ func (m Model) renderFooter() string {
 		return "\n" + styles.Success.Render(m.exportStatus)
 	}
 
-	currentCellValue := ""
-	columnType := ""
-	fkRef := ""
+	// Build cell preview (conditional)
+	cellPreview := ""
+	if m.uiVisibility.FooterCellContent {
+		currentCellValue := ""
+		columnType := ""
+		fkRef := ""
 
-	if m.selectedRow >= 0 && m.selectedRow < len(m.data) &&
-		m.selectedCol >= 0 && m.selectedCol < len(m.data[m.selectedRow]) {
-		currentCellValue = m.data[m.selectedRow][m.selectedCol]
+		if m.selectedRow >= 0 && m.selectedRow < len(m.data) &&
+			m.selectedCol >= 0 && m.selectedCol < len(m.data[m.selectedRow]) {
+			currentCellValue = m.data[m.selectedRow][m.selectedCol]
+		}
+
+		if m.selectedCol >= 0 && m.selectedCol < len(m.columnTypes) {
+			columnType = m.columnTypes[m.selectedCol]
+		}
+
+		if m.selectedCol >= 0 && m.selectedCol < len(m.columnFKs) && m.columnFKs[m.selectedCol] != "" {
+			fkRef = fmt.Sprintf(" FK → %s", m.columnFKs[m.selectedCol])
+		}
+
+		maxPreviewWidth := m.width - len(columnType) - len(fkRef) - 10
+		displayValue := currentCellValue
+		if len(displayValue) > maxPreviewWidth && maxPreviewWidth > 0 {
+			displayValue = displayValue[:maxPreviewWidth-3] + "..."
+		}
+
+		cellPreview = fmt.Sprintf("%s%s %s\n",
+			styles.Faint.Render(columnType),
+			styles.Faint.Render(fkRef),
+			styles.TableCell.Render(displayValue))
 	}
 
-	if m.selectedCol >= 0 && m.selectedCol < len(m.columnTypes) {
-		columnType = m.columnTypes[m.selectedCol]
-	}
-
-	if m.selectedCol >= 0 && m.selectedCol < len(m.columnFKs) && m.columnFKs[m.selectedCol] != "" {
-		fkRef = fmt.Sprintf(" FK → %s", m.columnFKs[m.selectedCol])
-	}
-
-	maxPreviewWidth := m.width - len(columnType) - len(fkRef) - 10
-	displayValue := currentCellValue
-	if len(displayValue) > maxPreviewWidth && maxPreviewWidth > 0 {
-		displayValue = displayValue[:maxPreviewWidth-3] + "..."
-	}
-
-	cellPreview := fmt.Sprintf("%s%s %s\n",
-		styles.Faint.Render(columnType),
-		styles.Faint.Render(fkRef),
-		styles.TableCell.Render(displayValue))
-
-	updateInfo := ""
-	delInfo := ""
-	enterInfo := ""
-
-	if m.isTablesList {
-		// Special footer for tables list
-		enterInfo = styles.TableHeader.Render(
-			"↵",
-		) + styles.Faint.Render(
-			"enter",
-		)
-		updateInfo = ""
-		delInfo = ""
-	} else if m.tableName != "" && m.primaryKeyCol != "" {
-		updateInfo = styles.TableHeader.Render(
-			"u",
-		) + styles.Faint.Render(
-			"pdate",
-		)
-		delInfo = styles.TableHeader.Render("D") + styles.Faint.Render("el")
-	} else if m.tableName != "" {
-		updateInfo = styles.TableHeader.Render(
-			"u",
-		) + styles.Faint.Render(
-			"pdate (no PK)",
-		)
-		delInfo = ""
-	} else {
-		// No table name means JOIN or complex query
-		updateInfo = styles.Faint.Render("(update/delete disabled)")
-		delInfo = ""
-	}
-
-	sel := styles.TableHeader.Render("v") + styles.Faint.Render("sel")
-	edit := styles.TableHeader.Render("e") + styles.Faint.Render("ditSQL")
-	save := styles.TableHeader.Render("s") + styles.Faint.Render("ave")
-	yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
-	exportKey := styles.Faint.Render("e") + styles.TableHeader.Render("x") + styles.Faint.Render("port")
-	quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
-	hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
-
-	var footer string
-	if m.isTablesList {
-		footer = fmt.Sprintf(
-			"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s",
-			cellPreview,
+	// Build stats info (conditional)
+	statsInfo := ""
+	if m.uiVisibility.FooterStats {
+		statsInfo = fmt.Sprintf("%s | %s | %s",
 			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
 			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
 			styles.Faint.Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
-			enterInfo,
-			yank,
-			edit,
-			save,
-			quit,
-			hjkl,
 		)
-	} else {
-		if m.visualMode {
-			footer = fmt.Sprintf(
-				"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s",
-				cellPreview,
-				styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
-				styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-				styles.Faint.Render(
-					fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
-				),
+	}
+
+	// Build keymaps info (conditional)
+	keymapsInfo := ""
+	if m.uiVisibility.FooterKeymaps {
+		updateInfo := ""
+		delInfo := ""
+		enterInfo := ""
+
+		if m.isTablesList {
+			// Special footer for tables list
+			enterInfo = styles.TableHeader.Render(
+				"↵",
+			) + styles.Faint.Render(
+				"enter",
+			)
+			updateInfo = ""
+			delInfo = ""
+		} else if m.tableName != "" && m.primaryKeyCol != "" {
+			updateInfo = styles.TableHeader.Render(
+				"u",
+			) + styles.Faint.Render(
+				"pdate",
+			)
+			delInfo = styles.TableHeader.Render("D") + styles.Faint.Render("el")
+		} else if m.tableName != "" {
+			updateInfo = styles.TableHeader.Render(
+				"u",
+			) + styles.Faint.Render(
+				"pdate (no PK)",
+			)
+			delInfo = ""
+		} else {
+			// No table name means JOIN or complex query
+			updateInfo = styles.Faint.Render("(update/delete disabled)")
+			delInfo = ""
+		}
+
+		sel := styles.TableHeader.Render("v") + styles.Faint.Render("sel")
+		edit := styles.TableHeader.Render("e") + styles.Faint.Render("ditSQL")
+		save := styles.TableHeader.Render("s") + styles.Faint.Render("ave")
+		yank := styles.TableHeader.Render("y") + styles.Faint.Render("ank")
+		exportKey := styles.Faint.Render("e") + styles.TableHeader.Render("x") + styles.Faint.Render("port")
+		quit := styles.TableHeader.Render("q") + styles.Faint.Render("uit")
+		hjkl := styles.TableHeader.Render("hjkl") + styles.Faint.Render("←↓↑→")
+
+		if m.isTablesList {
+			keymapsInfo = fmt.Sprintf("  %s  %s  %s  %s  %s  %s",
+				enterInfo,
+				yank,
+				edit,
+				save,
+				quit,
+				hjkl,
+			)
+		} else if m.visualMode {
+			keymapsInfo = fmt.Sprintf("  %s  %s  %s  %s  %s  %s  %s",
 				yank,
 				exportKey,
 				sel,
@@ -247,14 +254,7 @@ func (m Model) renderFooter() string {
 				hjkl,
 			)
 		} else {
-			footer = fmt.Sprintf(
-				"\n%s%s %s | %s | %s  %s  %s  %s  %s  %s  %s  %s  %s",
-				cellPreview,
-				styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
-				styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-				styles.Faint.Render(
-					fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1),
-				),
+			keymapsInfo = fmt.Sprintf("  %s  %s  %s  %s  %s  %s  %s  %s  %s",
 				updateInfo,
 				delInfo,
 				yank,
@@ -267,7 +267,9 @@ func (m Model) renderFooter() string {
 			)
 		}
 	}
-	return footer
+
+	// Assemble footer from conditional parts
+	return fmt.Sprintf("\n%s%s%s", cellPreview, statsInfo, keymapsInfo)
 }
 
 func (m Model) getCellStyle(row, col int) lipgloss.Style {

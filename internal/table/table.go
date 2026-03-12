@@ -4,6 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 )
 
@@ -16,6 +17,7 @@ func Render(
 	tableName, primaryKeyCol string,
 	query db.Query,
 	columnWidth int,
+	visibility config.UIVisibility,
 	saveCallback func(query db.Query) (db.Query, error),
 	initialStatus ...string,
 ) (Model, error) {
@@ -29,6 +31,7 @@ func Render(
 		primaryKeyCol,
 		query,
 		columnWidth,
+		visibility,
 	)
 	model.saveQueryCallback = saveCallback
 	if len(initialStatus) > 0 && initialStatus[0] != "" {
@@ -49,8 +52,9 @@ func RenderTablesList(
 	conn db.DatabaseConnection,
 	query db.Query,
 	columnWidth int,
+	visibility config.UIVisibility,
 ) (Model, error) {
-	model := New(columns, nil, data, elapsed, conn, "", "", query, columnWidth)
+	model := New(columns, nil, data, elapsed, conn, "", "", query, columnWidth, visibility)
 	model.isTablesList = true
 	p := tea.NewProgram(model)
 	finalModel, err := p.Run()

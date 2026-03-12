@@ -70,6 +70,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
+	case "?":
+		m.uiVisibility.FooterKeymaps = !m.uiVisibility.FooterKeymaps
+		return m, nil
 
 	case "up", "k":
 		return m.moveUp(), nil

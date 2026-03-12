@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/parser"
 )
@@ -51,6 +52,7 @@ type Model struct {
 	statusMessage     string
 	exportWaiting     exportWaitingFormatState
 	exportStatus      string
+	uiVisibility      config.UIVisibility
 }
 
 type blinkMsg struct{}
@@ -64,6 +66,7 @@ func New(
 	tableName, primaryKeyCol string,
 	query db.Query,
 	columnWidth int,
+	visibility config.UIVisibility,
 ) Model {
 	columnTypes := make([]string, len(columns))
 
@@ -132,6 +135,7 @@ func New(
 		editedQuery:      "",
 		cellWidth:        columnWidth,
 		isTablesList:     false,
+		uiVisibility:     visibility,
 	}
 }
 
@@ -165,19 +169,28 @@ func (m Model) SetStatusMessage(msg string) Model {
 }
 
 func (m Model) calculateHeaderLines() int {
-	titleLines := 1
+	headerLines := 0
 
-	var queryToDisplay string
-	if m.lastExecutedQuery != "" {
-		queryToDisplay = m.lastExecutedQuery
-	} else {
-		queryToDisplay = m.currentQuery.SQL
+	if m.uiVisibility.QueryName {
+		headerLines++
 	}
 
-	formattedSQL := parser.FormatSQLWithLineBreaks(queryToDisplay)
-	sqlLines := strings.Count(formattedSQL, "\n") + 1
+	if m.uiVisibility.QuerySQL {
+		var queryToDisplay string
+		if m.lastExecutedQuery != "" {
+			queryToDisplay = m.lastExecutedQuery
+		} else {
+			queryToDisplay = m.currentQuery.SQL
+		}
 
-	return titleLines + sqlLines + 1
+		formattedSQL := parser.FormatSQLWithLineBreaks(queryToDisplay)
+		headerLines += strings.Count(formattedSQL, "\n") + 1
+	}
+
+	// Always add separator line
+	headerLines++
+
+	return headerLines
 }
 
 func (m Model) SetTablesList(onSelect func(string) tea.Cmd) Model {
