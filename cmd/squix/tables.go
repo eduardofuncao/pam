@@ -75,7 +75,7 @@ func (a *App) handleTables() {
 			query.PrimaryKeys = metadata.PrimaryKeys
 		}
 
-		run.ExecuteSelect(
+		if err := run.ExecuteSelect(
 			query.SQL,
 			query.Name,
 			run.ExecutionParams{
@@ -83,7 +83,7 @@ func (a *App) handleTables() {
 				Connection:   conn,
 				Config:       a.config,
 				SaveCallback: a.saveQueryFromTable,
-				OnRerun: func(editedSQL string) {
+				OnRerun: func(editedSQL string) error {
 					// Re-run query if edited
 					editedQuery := db.Query{
 						Name:      tableName,
@@ -91,7 +91,7 @@ func (a *App) handleTables() {
 						TableName: tableName,
 						Id:        -1,
 					}
-					run.ExecuteSelect(
+					return run.ExecuteSelect(
 						editedSQL,
 						tableName,
 						run.ExecutionParams{
@@ -102,7 +102,9 @@ func (a *App) handleTables() {
 					)
 				},
 			},
-		)
+		); err != nil {
+			printError("%v", err)
+		}
 		return
 	}
 
@@ -209,7 +211,7 @@ func (a *App) showTablesInteractive(
 				query.PrimaryKeys = metadata.PrimaryKeys
 			}
 
-			run.ExecuteSelect(
+			if err := run.ExecuteSelect(
 				query.SQL,
 				query.Name,
 				run.ExecutionParams{
@@ -217,14 +219,14 @@ func (a *App) showTablesInteractive(
 					Connection:   conn,
 					Config:       a.config,
 					SaveCallback: a.saveQueryFromTable,
-					OnRerun: func(editedSQL string) {
+					OnRerun: func(editedSQL string) error {
 						editedQuery := db.Query{
 							Name:      selectedTable,
 							SQL:       editedSQL,
 							TableName: selectedTable,
 							Id:        -1,
 						}
-						run.ExecuteSelect(
+						return run.ExecuteSelect(
 							editedSQL,
 							selectedTable,
 							run.ExecutionParams{
@@ -235,7 +237,9 @@ func (a *App) showTablesInteractive(
 						)
 					},
 				},
-			)
+			); err != nil {
+				printError("%v", err)
+			}
 			// After returning from table view, go back to tables list
 			continue
 		}

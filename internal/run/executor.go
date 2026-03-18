@@ -3,6 +3,7 @@ package run
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	stdlib "database/sql"
@@ -22,8 +23,8 @@ type ExecutionParams struct {
 	Connection   db.DatabaseConnection
 	Config       *config.Config
 	SaveCallback SaveQueryCallback
-	OnRerun      func(editedSQL string)
-	Args         []any // Arguments for parameterized queries
+	OnRerun      func(editedSQL string) error
+	Args         []any  // Arguments for parameterized queries
 	DisplaySQL   string // Human-readable SQL with values substituted (for TUI display)
 }
 
@@ -88,18 +89,25 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) error {
 		q.SQL = params.DisplaySQL
 	}
 
-	// Render the TUI
-	model, err := table.Render(columns, columnTypes, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.Config.UIVisibility, params.SaveCallback)
-	if err != nil {
-		return fmt.Errorf("error rendering table: %w", err)
-	}
+	statusMessage := ""
 
-	// Handle re-run
-	if model.ShouldRerunQuery() && params.OnRerun != nil {
-		params.OnRerun(model.GetEditedQuery().SQL)
-	}
+	for {
+		model, err := table.Render(columns, columnTypes, data, elapsed, params.Connection, tableName, primaryKey, q, params.Config.DefaultColumnWidth, params.Config.UIVisibility, params.SaveCallback, statusMessage)
+		if err != nil {
+			return fmt.Errorf("error rendering table: %w", err)
+		}
 
-	return nil
+		if !model.ShouldRerunQuery() || params.OnRerun == nil {
+			return nil
+		}
+
+		err = params.OnRerun(model.GetEditedQuery().SQL)
+		if err == nil {
+			return nil
+		}
+
+		statusMessage = formatQueryError(err)
+	}
 }
 
 func ExecuteNonSelect(params ExecutionParams) {
@@ -157,4 +165,11 @@ func extractMetadata(conn db.DatabaseConnection, query db.Query) (string, string
 
 func printError(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
+
+func formatQueryError(err error) string {
+	msg := err.Error()
+	msg = strings.TrimPrefix(msg, "query execution failed: ")
+	msg = strings.TrimPrefix(msg, "error rendering table: ")
+	return styles.Error.Render("✗ Query failed: " + msg)
 }

@@ -43,7 +43,9 @@ func (a *App) handleRun() {
 
 	positionalArgs := params.MapPositionalArgs(resolved.Query.SQL, positionalArgsSlice)
 
-	a.executeQueryWithParams(resolved.Query, conn, paramFlags, positionalArgs)
+	if err := a.executeQueryWithParams(resolved.Query, conn, paramFlags, positionalArgs); err != nil {
+		printError("%v", err)
+	}
 }
 
 func parseRunFlags() run.Flags {
@@ -185,36 +187,34 @@ func (a *App) saveIfNeeded(resolved run.ResolvedQuery) {
 	}
 }
 
-func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection) {
-	originalQuery := query
-	run.Execute(run.ExecutionParams{
+func (a *App) executeQuery(query db.Query, conn db.DatabaseConnection) error {
+	var onRerun func(string) error
+	onRerun = func(editedSQL string) error {
+		editedQuery := db.Query{
+			Name: query.Name,
+			SQL:  editedSQL,
+			Id:   query.Id,
+		}
+
+		return run.Execute(run.ExecutionParams{
+			Query:        editedQuery,
+			Connection:   conn,
+			Config:       a.config,
+			SaveCallback: a.saveQueryFromTable,
+			OnRerun:      onRerun,
+		})
+	}
+
+	return run.Execute(run.ExecutionParams{
 		Query:        query,
 		Connection:   conn,
 		Config:       a.config,
 		SaveCallback: a.saveQueryFromTable,
-		OnRerun: func(editedSQL string) {
-			// Re-run callback - execute edited SQL
-			editedQuery := db.Query{
-				Name: originalQuery.Name,
-				SQL:  editedSQL,
-				Id:   originalQuery.Id,
-			}
-			run.Execute(run.ExecutionParams{
-				Query:        editedQuery,
-				Connection:   conn,
-				Config:       a.config,
-				SaveCallback: a.saveQueryFromTable,
-				OnRerun: func(sql string) {
-					a.executeQuery(editedQuery, conn)
-				},
-			})
-		},
+		OnRerun:      onRerun,
 	})
 }
 
-func (a *App) executeQueryWithParams(query db.Query, conn db.DatabaseConnection, paramFlags, positionalArgs map[string]string) {
-	originalQuery := query
-
+func (a *App) executeQueryWithParams(query db.Query, conn db.DatabaseConnection, paramFlags, positionalArgs map[string]string) error {
 	// Process parameters
 	sql, args, displaySQL := a.processParameters(query.SQL, conn, paramFlags, positionalArgs)
 
@@ -225,54 +225,46 @@ func (a *App) executeQueryWithParams(query db.Query, conn db.DatabaseConnection,
 		Id:   query.Id,
 	}
 
-	// Store original query metadata
-	originalQuery.SQL = query.SQL
+	var onRerun func(string) error
+	onRerun = func(editedSQL string) error {
+		// Re-run callback - if SQL contains placeholders, re-process parameters
+		// Otherwise execute the edited SQL directly
+		finalSQL := editedSQL
+		finalArgs := []any{}
+		finalDisplaySQL := ""
 
-	run.Execute(run.ExecutionParams{
+		if strings.Contains(editedSQL, ":") {
+			finalSQL, finalArgs, finalDisplaySQL = a.processParameters(editedSQL, conn, paramFlags, positionalArgs)
+		}
+		if finalDisplaySQL == "" {
+			finalDisplaySQL = finalSQL
+		}
+
+		processedQuery := db.Query{
+			Name: query.Name,
+			SQL:  finalSQL,
+			Id:   query.Id,
+		}
+
+		return run.Execute(run.ExecutionParams{
+			Query:        processedQuery,
+			Connection:   conn,
+			Config:       a.config,
+			SaveCallback: a.saveQueryFromTable,
+			Args:         finalArgs,
+			DisplaySQL:   finalDisplaySQL,
+			OnRerun:      onRerun,
+		})
+	}
+
+	return run.Execute(run.ExecutionParams{
 		Query:        processedQuery,
 		Connection:   conn,
 		Config:       a.config,
 		SaveCallback: a.saveQueryFromTable,
 		Args:         args,
 		DisplaySQL:   displaySQL,
-		OnRerun: func(editedSQL string) {
-			// Re-run callback - if SQL contains placeholders, re-process parameters
-			// Otherwise execute the edited SQL directly
-			finalSQL := editedSQL
-			finalArgs := []any{}
-			finalDisplaySQL := ""
-
-			if strings.Contains(editedSQL, ":") {
-				// User kept the parameter syntax, re-process with same params
-				finalSQL, finalArgs, finalDisplaySQL = a.processParameters(originalQuery.SQL, conn, paramFlags, positionalArgs)
-}
-		if finalDisplaySQL == "" {
-			finalDisplaySQL = finalSQL
-		}
-
-			editedQuery := db.Query{
-				Name: originalQuery.Name,
-				SQL:  finalSQL,
-				Id:   originalQuery.Id,
-			}
-			processedQuery := db.Query{
-				Name: editedQuery.Name,
-				SQL:  finalSQL,
-				Id:   editedQuery.Id,
-			}
-
-			run.Execute(run.ExecutionParams{
-				Query:        processedQuery,
-				Connection:   conn,
-				Config:       a.config,
-				SaveCallback: a.saveQueryFromTable,
-				Args:         finalArgs,
-				DisplaySQL:   finalDisplaySQL,
-				OnRerun: func(sql string) {
-					a.executeQueryWithParams(originalQuery, conn, paramFlags, positionalArgs)
-				},
-			})
-		},
+		OnRerun:      onRerun,
 	})
 }
 

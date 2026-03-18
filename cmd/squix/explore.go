@@ -52,21 +52,23 @@ func (a *App) handleExplore() {
 	sql := fmt.Sprintf("SELECT * FROM %s", tableName)
 	sql = conn.ApplyRowLimit(sql, limit)
 
-	var onRerun func(string)
-	onRerun = func(newSQL string) {
-		run.ExecuteSelect(newSQL, tableName, run.ExecutionParams{
-			Query:        db.Query{Name: tableName, SQL: newSQL},
-			Connection:   conn,
-			Config:       a.config,
-			OnRerun:      onRerun,
+	var onRerun func(string) error
+	onRerun = func(newSQL string) error {
+		return run.ExecuteSelect(newSQL, tableName, run.ExecutionParams{
+			Query:      db.Query{Name: tableName, SQL: newSQL},
+			Connection: conn,
+			Config:     a.config,
+			OnRerun:    onRerun,
 		})
 	}
-	run.ExecuteSelect(sql, tableName, run.ExecutionParams{
-		Query:        db.Query{Name: tableName, SQL: sql},
-		Connection:   conn,
-		Config:       a.config,
-		OnRerun:      onRerun,
-	})
+	if err := run.ExecuteSelect(sql, tableName, run.ExecutionParams{
+		Query:      db.Query{Name: tableName, SQL: sql},
+		Connection: conn,
+		Config:     a.config,
+		OnRerun:    onRerun,
+	}); err != nil {
+		printError("%v", err)
+	}
 }
 
 func (a *App) listTablesAndViews() {
@@ -159,4 +161,3 @@ func (a *App) formatTableList(items []string) {
 		fmt.Println()
 	}
 }
-
