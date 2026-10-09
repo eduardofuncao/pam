@@ -99,6 +99,20 @@ func getCompletions(args []string, cfg *config.Config) []string {
 			return []string{"table", "view"}
 		}
 		return []string{"table", "view"}
+	case "export":
+		for i, arg := range args {
+			if arg == "--format" && i == len(args)-1 {
+				return []string{"custom", "plain", "tar"}
+			}
+		}
+		if len(args) == 1 {
+			return []string{"backup", "schema"}
+		}
+		result := []string{"--format"}
+		if args[1] == "schema" {
+			result = append(result, "--table")
+		}
+		return result
 	case "edit", "delete", "rm", "remove":
 		return getCurrentConnectionQueries(cfg)
 	case "--connection", "-c":
@@ -136,6 +150,7 @@ func getSubcommands() []string {
 		"config",
 		"explain",
 		"example",
+		"export",
 		"help",
 	}
 }

@@ -75,6 +75,8 @@ func (a *App) Run() {
 		a.handleExplain()
 	case "example":
 		a.handleExample()
+	case "export":
+		a.handleExport()
 	case "help":
 		a.handleHelp()
 	case "__complete":

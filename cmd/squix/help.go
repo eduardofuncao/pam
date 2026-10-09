@@ -128,6 +128,11 @@ func (a *App) PrintGeneralHelp() {
 		),
 	)
 	fmt.Println(
+		"  export      " + styles.Faint.Render(
+			"Export a native database backup",
+		),
+	)
+	fmt.Println(
 		"  help        " + styles.Faint.Render(
 			"Show help for squix or a specific command",
 		),
@@ -634,6 +639,60 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  squix example                  # create ./example.db")
 		fmt.Println("  squix example my.db            # create ./my.db")
 		fmt.Println("  squix example --force          # recreate ./example.db")
+
+	case "export":
+		section("Command: export")
+		fmt.Println(
+			styles.Faint.Render(
+				"Export a native database backup or schema-only dump using the engine's own dump tool.",
+			),
+		)
+		fmt.Println()
+		section("Usage")
+		fmt.Println("  squix export backup [path] [--format <fmt>]")
+		fmt.Println("  squix export schema [path] [--table <name> ...] [--format <fmt>]")
+		fmt.Println()
+		section("Description")
+		fmt.Println(
+			"  - Currently supports Postgres only (via pg_dump); other engines error.",
+		)
+		fmt.Println(
+			"  - export backup dumps full data + schema; default format custom.",
+		)
+		fmt.Println(
+			"  - export schema dumps schema only (DDL, no data); default format plain.",
+		)
+		fmt.Println(
+			"  - --table narrows a schema export to specific tables (repeatable);",
+		)
+		fmt.Println(
+			"    it is only valid with export schema.",
+		)
+		fmt.Println(
+			"  - Format is inferred from the file extension, or set explicitly with",
+		)
+		fmt.Println(
+			"    --format. Setting both is an error.",
+		)
+		fmt.Println(
+			"  - If path is a directory, writes '<dbName>_<timestamp>.<ext>' inside it.",
+		)
+		fmt.Println(
+			"  - If path is omitted, writes to the current directory.",
+		)
+		fmt.Println()
+		section("Postgres formats")
+		fmt.Println("  custom  " + styles.Faint.Render(".dump, -Fc (backup default)"))
+		fmt.Println("  plain   " + styles.Faint.Render(".sql, -Fp (schema default)"))
+		fmt.Println("  tar     " + styles.Faint.Render(".tar, -Ft"))
+		fmt.Println()
+		section("Examples")
+		fmt.Println("  squix export backup")
+		fmt.Println("  squix export backup ./backups")
+		fmt.Println("  squix export backup dump --format tar")
+		fmt.Println("  squix export schema")
+		fmt.Println("  squix export schema --table users --table orders")
+		fmt.Println("  squix export schema out.dump --format custom")
 
 	case "info":
 		section("Command: info")
