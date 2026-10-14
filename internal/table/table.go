@@ -46,23 +46,3 @@ func Render(
 	}
 	return finalModel.(Model), nil
 }
-
-func RenderTablesList(
-	columns []string,
-	data [][]string,
-	elapsed time.Duration,
-	conn db.DatabaseConnection,
-	query db.Query,
-	columnWidth int,
-	visibility config.UIVisibility,
-	keyMap *config.KeyMap,
-) (Model, error) {
-	model := New(columns, nil, data, elapsed, conn, "", "", query, columnWidth, visibility, keyMap)
-	model.isTablesList = true
-	p := tea.NewProgram(model)
-	finalModel, err := p.Run()
-	if err != nil {
-		return model, err
-	}
-	return finalModel.(Model), nil
-}

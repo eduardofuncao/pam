@@ -8,12 +8,15 @@ import (
 )
 
 type ConnectionYAML struct {
-	Name       string              `yaml:"name"`
-	DBType     string              `yaml:"db_type"`
-	ConnString string              `yaml:"conn_string"`
-	Schema     string              `yaml:"schema,omitempty"`
-	Queries    map[string]db.Query `yaml:"queries"`
-	LastQuery  db.Query            `yaml:"last_query"`
+	Name       string `yaml:"name"`
+	DBType     string `yaml:"db_type"`
+	ConnString string `yaml:"conn_string"`
+	Schema     string `yaml:"schema,omitempty"`
+	// Deprecated: legacy migration input only. Saved queries now live in
+	// queries/<group>.sql files. Kept so the first load after upgrade can lift
+	// legacy per-connection queries; cleared by MigrateQueriesToFiles and never
+	// repopulated.
+	Queries map[string]db.Query `yaml:"queries,omitempty"`
 }
 
 func ToConnectionYAML(conn db.DatabaseConnection) *ConnectionYAML {
@@ -22,8 +25,6 @@ func ToConnectionYAML(conn db.DatabaseConnection) *ConnectionYAML {
 		DBType:     conn.GetDbType(),
 		ConnString: conn.GetConnString(),
 		Schema:     conn.GetSchema(),
-		Queries:    conn.GetQueries(),
-		LastQuery:  conn.GetLastQuery(),
 	}
 }
 
@@ -33,7 +34,5 @@ func FromConnectionYaml(yc *ConnectionYAML) db.DatabaseConnection {
 		log.Fatalf("could not create connection from yaml for: %s/%s", yc.DBType, yc.Name)
 	}
 	conn.SetSchema(yc.Schema)
-	conn.SetQueries(yc.Queries)
-	conn.SetLastQuery(yc.LastQuery)
 	return conn
 }

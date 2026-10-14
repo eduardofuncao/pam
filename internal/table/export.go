@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atotto/clipboard"
 	tea "charm.land/bubbletea/v2"
+	"github.com/atotto/clipboard"
 )
 
 type exportFormat string
@@ -273,7 +273,7 @@ func FormatHTML(headers []string, rows [][]string, opts FormatOptions) (string, 
 		if opts.DbName != "" || opts.DbType != "" {
 			title = fmt.Sprintf("%s (%s/%s)", escapeHTML(opts.QueryName), escapeHTML(opts.DbName), escapeHTML(opts.DbType))
 		}
-		buf.WriteString(fmt.Sprintf("<h3>%s</h3>\n", title))
+		fmt.Fprintf(&buf, "<h3>%s</h3>\n", title)
 	}
 
 	// Table structure
@@ -281,7 +281,7 @@ func FormatHTML(headers []string, rows [][]string, opts FormatOptions) (string, 
 	buf.WriteString("<thead>\n")
 	buf.WriteString("<tr>\n")
 	for _, header := range headers {
-		buf.WriteString(fmt.Sprintf("<th>%s</th>\n", escapeHTML(header)))
+		fmt.Fprintf(&buf, "<th>%s</th>\n", escapeHTML(header))
 	}
 	buf.WriteString("</tr>\n")
 	buf.WriteString("</thead>\n")
@@ -293,9 +293,9 @@ func FormatHTML(headers []string, rows [][]string, opts FormatOptions) (string, 
 		if i%2 == 1 {
 			rowClass = " class=\"odd\""
 		}
-		buf.WriteString(fmt.Sprintf("<tr%s>\n", rowClass))
+		fmt.Fprintf(&buf, "<tr%s>\n", rowClass)
 		for _, cell := range row {
-			buf.WriteString(fmt.Sprintf("<td>%s</td>\n", escapeHTML(cell)))
+			fmt.Fprintf(&buf, "<td>%s</td>\n", escapeHTML(cell))
 		}
 		buf.WriteString("</tr>\n")
 	}
@@ -325,7 +325,7 @@ func FormatSQL(headers []string, rows [][]string, opts FormatOptions) (string, e
 	var buf strings.Builder
 
 	for _, row := range rows {
-		buf.WriteString(fmt.Sprintf("INSERT INTO %s (", opts.TableName))
+		fmt.Fprintf(&buf, "INSERT INTO %s (", opts.TableName)
 
 		columns := make([]string, 0, len(headers))
 		for _, header := range headers {

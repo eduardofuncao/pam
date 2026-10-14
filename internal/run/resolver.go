@@ -13,19 +13,24 @@ import (
 //  2. Inline SQL (if selector looks like SQL)
 //  3. Saved query by name/ID
 //  4. Create new in editor (default)
-func ResolveQuery(flags Flags, cfg *config.Config, currentConn string, conn db.DatabaseConnection) (ResolvedQuery, error) {
-	// Priority 1: Last query with --last/-l flag
+func ResolveQuery(flags Flags, currentConn string, conn db.DatabaseConnection) (ResolvedQuery, error) {
+	// Priority 1: Last query with --last/-l flag (read from last-query.sql)
 	if flags.LastQuery {
 		if currentConn == "" {
 			return ResolvedQuery{}, fmt.Errorf("no active connection")
 		}
-		lastQuery := cfg.Connections[currentConn].LastQuery
-		if lastQuery.Name == "" {
+		sql, err := config.LoadLastQuery()
+		if err != nil {
+			return ResolvedQuery{}, fmt.Errorf("could not read last query: %w", err)
+		}
+		if sql == "" {
 			return ResolvedQuery{}, fmt.Errorf("no last query found. Run a query first, then use squix run --last")
 		}
+		// Nameless: the file holds SQL only. Saveable is false so a table-view
+		// save creates a new query instead of overwriting in place.
 		return ResolvedQuery{
-			Query:    lastQuery,
-			Saveable: true,
+			Query:    db.Query{Name: "<last>", SQL: sql, Id: -1},
+			Saveable: false,
 		}, nil
 	}
 

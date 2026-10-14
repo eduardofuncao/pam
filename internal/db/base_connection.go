@@ -14,7 +14,6 @@ type BaseConnection struct {
 	ConnString string
 	Schema     string
 	Queries    map[string]Query
-	LastQuery  Query
 }
 
 func (b *BaseConnection) Open() error {
@@ -126,14 +125,6 @@ func (b *BaseConnection) GetName() string { return b.Name }
 func (b *BaseConnection) GetDbType() string { return b.DbType }
 
 func (b *BaseConnection) GetConnString() string { return b.ConnString }
-
-func (b *BaseConnection) GetLastQuery() Query { return b.LastQuery }
-
-func (b *BaseConnection) SetLastQuery(
-	query Query,
-) {
-	b.LastQuery = query
-}
 
 func (b *BaseConnection) GetQueries() map[string]Query { return b.Queries }
 

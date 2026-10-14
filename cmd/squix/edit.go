@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/editor"
 	"github.com/eduardofuncao/squix/internal/styles"
@@ -31,23 +32,19 @@ func (a *App) editSingleQuery(selector string) {
 		log.Fatal("No active connection. Use 'squix switch <connection>' or 'squix init' first")
 	}
 
-	conn, ok := a.config.Connections[a.config.CurrentConnection]
-	if !ok {
+	if _, ok := a.config.Connections[a.config.CurrentConnection]; !ok {
 		log.Fatalf("Connection %s not found", a.config.CurrentConnection)
 	}
+	queries := a.config.QueriesFor(a.config.CurrentConnection)
 
 	// Find the query
-	query, exists := db.FindQueryWithSelector(conn.Queries, selector)
+	query, exists := db.FindQueryWithSelector(queries, selector)
 	if !exists {
 		log.Fatalf("Query '%s' not found in connection '%s'", selector, a.config.CurrentConnection)
 	}
 
-	// Create temp file with the query SQL
-	var content strings.Builder
-	content.WriteString(fmt.Sprintf("-- %s\n", query.Name))
-	content.WriteString(query.SQL)
-
-	tmpFile, err := editor.CreateTempFile("squix-edit-query-", content.String())
+	// Render the single query block (round-trips table/pk metadata too).
+	tmpFile, err := editor.CreateTempFile("squix-edit-query-", config.RenderQuery(query))
 	if err != nil {
 		log.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -55,7 +52,6 @@ func (a *App) editSingleQuery(selector string) {
 	defer os.Remove(tmpPath)
 	tmpFile.Close()
 
-	// Open editor
 	editorCmd, err := editor.CheckEditor()
 	if err != nil {
 		log.Fatal(err)
@@ -74,32 +70,40 @@ func (a *App) editSingleQuery(selector string) {
 		log.Fatalf("Failed to read edited file: %v", err)
 	}
 
-	newName, newSQL, err := parseSingleQueryFile(editedData)
+	parsed, err := config.ParseGroupFile([]byte(editedData))
 	if err != nil {
 		log.Fatalf("Failed to parse edited query: %v", err)
 	}
+	if len(parsed) != 1 {
+		log.Fatalf("Expected exactly one query block, got %d", len(parsed))
+	}
+	var edited db.Query
+	for _, q := range parsed {
+		edited = q
+	}
 
-	if newName != query.Name {
-		if !a.confirmQueryRename(query.Name, newName) {
+	oldName := query.Name
+	if edited.Name != oldName {
+		if !a.confirmQueryRename(oldName, edited.Name) {
 			fmt.Println(styles.Faint.Render("Aborted"))
 			return
 		}
-
-		delete(conn.Queries, query.Name)
+		delete(queries, oldName)
 	}
 
-	// Update query
-	query.Name = newName
-	query.SQL = newSQL
-	conn.Queries[query.Name] = query
-	a.config.Connections[a.config.CurrentConnection] = conn
+	// Update query (preserve id; reassign the rest from the edited block).
+	query.Name = edited.Name
+	query.SQL = edited.SQL
+	query.TableName = edited.TableName
+	query.PrimaryKeys = edited.PrimaryKeys
+	queries[query.Name] = query
 
 	if err := a.config.Save(); err != nil {
 		log.Fatalf("Failed to save config: %v", err)
 	}
 
-	if newName != query.Name {
-		fmt.Printf("✓ Renamed and updated query '%s' → '%s'\n", query.Name, newName)
+	if edited.Name != oldName {
+		fmt.Printf("✓ Renamed and updated query '%s' → '%s'\n", oldName, edited.Name)
 	} else {
 		fmt.Printf("✓ Updated query '%s'\n", query.Name)
 	}
@@ -124,19 +128,14 @@ func (a *App) editQueriesWithEditor(editorCmd string) {
 	if !ok {
 		log.Fatalf("Connection %s not found", a.config.CurrentConnection)
 	}
+	queries := a.config.QueriesFor(a.config.CurrentConnection)
 
 	var content strings.Builder
-	content.WriteString(fmt.Sprintf("-- Editing queries for connection: %s (%s)\n",
-		a.config.CurrentConnection, conn.DBType))
-	content.WriteString("-- Format: -- runname\n")
-	content.WriteString("--         SQL run here\n")
+	fmt.Fprintf(&content, "-- Editing queries for connection: %s (%s)\n",
+		a.config.CurrentConnection, conn.DBType)
+	content.WriteString("-- Format: -- @query <name>  (+ optional -- @table / -- @pk)\n")
 	content.WriteString("-- Save and close to update\n\n")
-
-	for _, query := range conn.Queries {
-		content.WriteString(fmt.Sprintf("-- %s\n", query.Name))
-		content.WriteString(strings.TrimSpace(query.SQL))
-		content.WriteString("\n\n")
-	}
+	content.WriteString(config.RenderGroup(queries))
 
 	tmpFile, err := editor.CreateTempFile("squix-queries-", content.String())
 	if err != nil {
@@ -159,77 +158,20 @@ func (a *App) editQueriesWithEditor(editorCmd string) {
 		log.Fatalf("Failed to read edited file: %v", err)
 	}
 
-	editedQueries, err := parseSQLQueriesFile(editedData)
+	editedQueries, err := config.ParseGroupFile([]byte(editedData))
 	if err != nil {
 		log.Fatalf("Failed to parse edited queries: %v", err)
 	}
+	config.AssignIDs(editedQueries)
 
-	conn.Queries = editedQueries
-	a.config.Connections[a.config.CurrentConnection] = conn
+	// Replace the shared library in place so sibling connections see the change.
+	a.config.SetQueriesFor(a.config.CurrentConnection, editedQueries)
 
 	if err := a.config.Save(); err != nil {
 		log.Fatalf("Failed to save config: %v", err)
 	}
 
 	fmt.Printf("✓ Updated queries for connection: %s\n", a.config.CurrentConnection)
-}
-
-// parseSingleQueryFile parses a file containing a single query
-// Expected format:
-//
-//	-- queryname
-//	SQL query here
-func parseSingleQueryFile(content string) (string, string, error) {
-	lines := strings.Split(strings.TrimSpace(content), "\n")
-	if len(lines) == 0 {
-		return "", "", fmt.Errorf("empty file")
-	}
-
-	// First non-empty line should be the query name comment
-	var queryName string
-	var sqlLines []string
-	foundName := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Skip empty lines at the start
-		if !foundName && trimmed == "" {
-			continue
-		}
-
-		// Look for query name comment
-		if !foundName {
-			if comment, ok := strings.CutPrefix(trimmed, "--"); ok {
-				queryName = strings.TrimSpace(comment)
-				foundName = true
-				continue
-			} else {
-				// First non-empty line is not a comment
-				// Treat entire content as SQL with no name change
-				queryName = "" // Will trigger error if not provided
-				break
-			}
-		}
-
-		// Rest is SQL
-		if foundName {
-			if !strings.HasPrefix(trimmed, "--") {
-				sqlLines = append(sqlLines, line)
-			}
-		}
-	}
-
-	if queryName == "" {
-		return "", "", fmt.Errorf("query name not found (expected '-- queryname' on first line)")
-	}
-
-	if len(sqlLines) == 0 {
-		return queryName, "", fmt.Errorf("no SQL content found")
-	}
-
-	sql := strings.Join(sqlLines, "\n")
-	return queryName, sql, nil
 }
 
 func (a *App) confirmQueryRename(oldName, newName string) bool {
@@ -243,52 +185,4 @@ func (a *App) confirmQueryRename(oldName, newName string) bool {
 
 	response = strings.TrimSpace(strings.ToLower(response))
 	return response == "y" || response == "yes"
-}
-
-// parseSQLQueriesFile parses a SQL file with the format:
-// -- queryname
-// SQL query here
-func parseSQLQueriesFile(content string) (map[string]db.Query, error) {
-	queries := make(map[string]db.Query)
-	var name string
-	var sql strings.Builder
-	id := 1
-
-	save := func() {
-		if name != "" && sql.Len() > 0 {
-			queries[name] = db.Query{Name: name, SQL: strings.TrimSpace(sql.String()), Id: id}
-			id++
-			sql.Reset()
-		}
-	}
-
-	for line := range strings.SplitSeq(content, "\n") {
-		trimmed := strings.TrimSpace(line)
-
-		// Check for query name comment
-		if comment, ok := strings.CutPrefix(trimmed, "--"); ok {
-			comment = strings.TrimSpace(comment)
-
-			// Skip help comments
-			if strings.HasPrefix(comment, "Editing") || strings.HasPrefix(comment, "Format") ||
-				strings.HasPrefix(comment, "SQL") || strings.HasPrefix(comment, "Save") {
-				continue
-			}
-
-			save()
-			name = comment
-			continue
-		}
-
-		// Add SQL line
-		if name != "" {
-			if sql.Len() > 0 {
-				sql.WriteString("\n")
-			}
-			sql.WriteString(line)
-		}
-	}
-
-	save()
-	return queries, nil
 }

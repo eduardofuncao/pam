@@ -30,14 +30,14 @@ const (
 	ActionUpdate    Action = "update"
 	ActionDeleteRow Action = "delete_row"
 
-	ActionEditSQL       Action = "edit_sql"
-	ActionSaveQuery     Action = "save_query"
-	ActionSearch        Action = "search"
-	ActionSearchCol     Action = "search_col"
-	ActionNextMatch     Action = "next_match"
-	ActionPrevMatch     Action = "prev_match"
-	ActionPrevColMatch  Action = "prev_col_match"
-	ActionNextColMatch  Action = "next_col_match"
+	ActionEditSQL      Action = "edit_sql"
+	ActionSaveQuery    Action = "save_query"
+	ActionSearch       Action = "search"
+	ActionSearchCol    Action = "search_col"
+	ActionNextMatch    Action = "next_match"
+	ActionPrevMatch    Action = "prev_match"
+	ActionPrevColMatch Action = "prev_col_match"
+	ActionNextColMatch Action = "next_col_match"
 
 	ActionHelp         Action = "help"
 	ActionToggleFooter Action = "toggle_footer"
@@ -50,6 +50,11 @@ const (
 	ActionDetailScrollUp   Action = "detail_scroll_up"
 	ActionDetailScrollDown Action = "detail_scroll_down"
 
+	ActionExplorerSelect     Action = "explorer_select"
+	ActionExplorerColumns    Action = "explorer_columns"
+	ActionExplorerRelations  Action = "explorer_relations"
+	ActionExplorerToggleFold Action = "explorer_toggle_fold"
+
 	ActionHelpClose Action = "help_close"
 )
 
@@ -59,6 +64,8 @@ const (
 	ModeNormal Mode = iota
 	ModeDetail
 	ModeHelp
+	ModeExplorer
+	ModeExplorerRelations
 )
 
 var modeActions = map[Mode][]Action{
@@ -79,6 +86,19 @@ var modeActions = map[Mode][]Action{
 	},
 	ModeHelp: {
 		ActionHelpClose,
+	},
+	ModeExplorer: {
+		ActionMoveUp, ActionMoveDown,
+		ActionJumpFirstRow, ActionJumpLastRow,
+		ActionPageUp, ActionPageDown,
+		ActionSearch, ActionNextMatch, ActionPrevMatch,
+		ActionExplorerSelect,
+		ActionExplorerColumns, ActionExplorerRelations, ActionExplorerToggleFold,
+		ActionHelp, ActionToggleFooter, ActionQuit,
+	},
+	ModeExplorerRelations: {
+		ActionMoveUp, ActionMoveDown,
+		ActionQuit,
 	},
 }
 
@@ -123,6 +143,11 @@ var DefaultKeybindings = map[Action][]string{
 	ActionDetailYank:       {"y"},
 	ActionDetailScrollUp:   {"k", "up"},
 	ActionDetailScrollDown: {"j", "down"},
+
+	ActionExplorerSelect:     {"enter"},
+	ActionExplorerColumns:    {"c"},
+	ActionExplorerRelations:  {"r"},
+	ActionExplorerToggleFold: {"tab"},
 
 	ActionHelpClose: {"H", "q", "esc"},
 }

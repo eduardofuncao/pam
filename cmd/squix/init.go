@@ -102,23 +102,23 @@ func parseInitArgs(args []string) (string, string, string, string) {
 		for i := 0; i < len(args); i++ {
 			arg := args[i]
 
-			switch {
-			case arg == "--name" || arg == "-n":
+			switch arg {
+			case "--name", "-n":
 				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 					name = args[i+1]
 					i++
 				}
-			case arg == "--type" || arg == "-t":
+			case "--type", "-t":
 				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 					dbType = args[i+1]
 					i++
 				}
-			case arg == "--conn-string" || arg == "--conn" || arg == "-c":
+			case "--conn-string", "--conn", "-c":
 				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 					connString = args[i+1]
 					i++
 				}
-			case arg == "--schema" || arg == "-s":
+			case "--schema", "-s":
 				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 					schema = args[i+1]
 					i++

@@ -30,11 +30,11 @@
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `explore` | List all tables and views in multi-column format | `squix explore` |
+| `explore` | Open interactive schema explorer (tables + views) | `squix explore` |
+| `explore --oneline [--tables] [--views]` | Print table/view names one per line | `squix explore --oneline` |
 | `explore <table> [-l N]` | Query a table with optional row limit | `squix explore employees --limit 100` |
 | `explore <file.csv>` | View a local CSV file in the results view (read-only) | `squix explore sales.csv` |
-| `explain <table> [-d N] [-c]` | Visualize foreign key relationships | `squix explain employees --depth 2` |
-| `tables` | List all tables in using the results view, access with Enter| `squix tables` |
+| `explain <table> [-d N] [-v]` | Visualize foreign key relationships | `squix explain employees --depth 2` |
 | `example [path] [--force]` | Create a sample office-themed SQLite database to try squix | `squix example` |
 
 ## Configuration
@@ -42,7 +42,7 @@
 | Command | Description | Example |
 |---------|-------------|---------|
 | `config` | Edit main configuration file | `squix config` |
-| `edit` | Edit all queries for current connection | `squix edit` |
+| `edit` | Edit all queries for current connection's library (shared across `{service}:{env}` siblings) | `squix edit` |
 | `edit <name\|id>` | Edit a single named query | `squix edit 3` |
 | `remove --connection <name>` | Remove a db connection | `squix remove --conection dev4`` |
 | `help [command]` | Show help information | `squix help run` |

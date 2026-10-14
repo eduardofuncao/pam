@@ -84,18 +84,12 @@ func (a *App) PrintGeneralHelp() {
 		),
 	)
 	fmt.Println(
-		"  tables      " + styles.Faint.Render("List or query database tables"),
-	)
-	fmt.Println(
-		"  explore     " + styles.Faint.Render("Explore database schema"),
+		"  explore     " + styles.Faint.Render(
+			"Explore database schema interactively or query a table",
+		),
 	)
 	fmt.Println(
 		"  list        " + styles.Faint.Render("List connections or queries"),
-	)
-	fmt.Println(
-		"  info        " + styles.Faint.Render(
-			"Show tables or views in current connection",
-		),
 	)
 	fmt.Println(
 		"  edit        " + styles.Faint.Render(
@@ -273,9 +267,7 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  squix add <run-name> [query]")
 		fmt.Println()
 		section("Description")
-		fmt.Println(
-			fmt.Sprintf("  - If [query] is omitted, squix opens $EDITOR (default: %s) so you", editor.GetEditorCommand()),
-		)
+		fmt.Printf("  - If [query] is omitted, squix opens $EDITOR (default: %s) so you\n", editor.GetEditorCommand())
 		fmt.Println("    can write the query interactively.")
 		fmt.Println("  - Each query gets a numeric ID as well as a name.")
 		fmt.Println("  - Requires an active connection (use 'squix switch').")
@@ -429,37 +421,6 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  squix list queries --oneline    # list each query in one separate line")
 		fmt.Println("  squix list connections")
 
-	case "tables":
-		section("Command: tables")
-		fmt.Println(
-			styles.Faint.Render(
-				"List all tables in the current database or query a specific table.",
-			),
-		)
-		fmt.Println()
-		section("Usage")
-		fmt.Println("  squix tables [table-name] [--oneline | -o]")
-		fmt.Println()
-		section("Description")
-		fmt.Println(
-			"  Without arguments, lists all tables in the current database connection.",
-		)
-		fmt.Println(
-			"  With a table name, executes 'SELECT * FROM <table>' and displays results",
-		)
-		fmt.Println("  in an interactive table view.")
-		fmt.Println()
-		fmt.Println(
-			"  --oneline, -o  " + styles.Faint.Render(
-				"Display table names one per line (useful for scripting)",
-			),
-		)
-		fmt.Println()
-		section("Examples")
-		fmt.Println("  squix tables              # list all tables")
-		fmt.Println("  squix tables users        # query the users table")
-		fmt.Println("  squix tables --oneline    # list tables in oneline format")
-
 	case "disconnect":
 		section("Command: disconnect")
 		fmt.Println(
@@ -516,9 +477,7 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  squix config")
 		fmt.Println()
 		section("Description")
-		fmt.Println(
-			fmt.Sprintf("  Opens the configuration file (%s) in your editor.", configPathDisplay()),
-		)
+		fmt.Printf("  Opens the configuration file (%s) in your editor.\n", configPathDisplay())
 		fmt.Println("  Allows you to edit connections, color schemes, and other settings.")
 		fmt.Println()
 		section("Examples")
@@ -528,18 +487,32 @@ func (a *App) PrintCommandHelp() {
 		section("Command: explore")
 		fmt.Println(
 			styles.Faint.Render(
-				"Explore your database schema and query tables interactively, or view CSV files.",
+				"Explore your database schema interactively, query tables, or view CSV files.",
 			),
 		)
 		fmt.Println()
 		section("Usage")
 		fmt.Println("  squix explore")
+		fmt.Println("  squix explore [--oneline | -o] [--tables] [--views]")
 		fmt.Println("  squix explore <table> [--limit | -l N]")
 		fmt.Println("  squix explore <file.csv>")
 		fmt.Println()
 		section("Description")
 		fmt.Println(
-			"  Without arguments, lists all tables and views in multi-column format.",
+			"  Without arguments, opens an interactive schema explorer listing tables",
+		)
+		fmt.Println("  and views in foldable sections.")
+		fmt.Println()
+		fmt.Println(
+			"  --oneline, -o  " + styles.Faint.Render(
+				"Print table/view names one per line (scriptable)",
+			),
+		)
+		fmt.Println(
+			"  --tables       " + styles.Faint.Render("Only show tables"),
+		)
+		fmt.Println(
+			"  --views        " + styles.Faint.Render("Only show views"),
 		)
 		fmt.Println(
 			"  With a table name, queries the table and shows results in an",
@@ -555,8 +528,56 @@ func (a *App) PrintCommandHelp() {
 			),
 		)
 		fmt.Println()
+		section("Explorer keybinds")
+		fmt.Println(
+			"  j / k           " + styles.Faint.Render("Navigate items"),
+		)
+		fmt.Println(
+			"  g / G           " + styles.Faint.Render("Jump to top / bottom"),
+		)
+		fmt.Println(
+			"  Ctrl+u / Ctrl+d " + styles.Faint.Render("Page up / down"),
+		)
+		fmt.Println(
+			"  enter           " + styles.Faint.Render("SELECT * from selected item"),
+		)
+		fmt.Println(
+			"  c               " + styles.Faint.Render("Show columns metadata"),
+		)
+		fmt.Println(
+			"  r               " + styles.Faint.Render("Show relationships tree"),
+		)
+		fmt.Println(
+			"  Tab             " + styles.Faint.Render("Fold/unfold current section"),
+		)
+		fmt.Println(
+			"  /               " + styles.Faint.Render("Search items"),
+		)
+		fmt.Println(
+			"  n / N           " + styles.Faint.Render("Next/previous match"),
+		)
+		fmt.Println(
+			"  H               " + styles.Faint.Render("Show keyboard shortcuts overlay"),
+		)
+		fmt.Println(
+			"  q / ctrl+c      " + styles.Faint.Render("Quit"),
+		)
+		fmt.Println()
+		fmt.Println(
+			styles.Faint.Render(
+				"  Explorer keybinds use built-in defaults; add explorer_* entries",
+			),
+		)
+		fmt.Println(
+			styles.Faint.Render(
+				"  under keybindings: in ~/.config/squix/config.yaml to override.",
+			),
+		)
+		fmt.Println()
 		section("Examples")
-		fmt.Println("  squix explore                  # list all tables and views")
+		fmt.Println("  squix explore                  # open interactive schema explorer")
+		fmt.Println("  squix explore --oneline        # print tables/views one per line")
+		fmt.Println("  squix explore --views          # explorer with views only")
 		fmt.Println("  squix explore employees        # query employees table")
 		fmt.Println("  squix explore orders -l 50     # query with 50 row limit")
 		fmt.Println("  squix explore data.csv         # view CSV file")
@@ -634,38 +655,6 @@ func (a *App) PrintCommandHelp() {
 		fmt.Println("  squix example                  # create ./example.db")
 		fmt.Println("  squix example my.db            # create ./my.db")
 		fmt.Println("  squix example --force          # recreate ./example.db")
-
-	case "info":
-		section("Command: info")
-		fmt.Println(
-			styles.Faint.Render(
-				"Show all tables or views in the current database connection.",
-			),
-		)
-		fmt.Println()
-		section("Usage")
-		fmt.Println("  squix info <tables | views>")
-		fmt.Println()
-		section("Description")
-		fmt.Println(
-			"  tables  " + styles.Faint.Render(
-				"List all tables in the current connection/schema.",
-			),
-		)
-		fmt.Println(
-			"  views   " + styles.Faint.Render(
-				"List all views in the current connection/schema.",
-			),
-		)
-		fmt.Println()
-		section("Columns displayed")
-		fmt.Println("  - schema (if supported by database)")
-		fmt.Println("  - name")
-		fmt.Println("  - owner (if supported by database)")
-		fmt.Println()
-		section("Examples")
-		fmt.Println("  squix info tables")
-		fmt.Println("  squix info views")
 
 	case "status":
 		section("Command: status")

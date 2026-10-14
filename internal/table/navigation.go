@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atotto/clipboard"
 	tea "charm.land/bubbletea/v2"
+	"github.com/atotto/clipboard"
 	"github.com/eduardofuncao/squix/internal/editor"
 )
 

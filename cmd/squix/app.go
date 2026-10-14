@@ -57,16 +57,12 @@ func (a *App) Run() {
 		a.handleListConnections()
 	case "edit":
 		a.handleEdit()
-	case "info":
-		a.handleInfo()
 	case "explore":
 		a.handleExplore()
 	case "status", "st", "test":
 		a.handleStatus()
 	case "history":
 		a.handleHistory()
-	case "tables", "t":
-		a.handleTables()
 	case "disconnect", "clear", "unset":
 		a.handleDisconnect()
 	case "config":
@@ -112,10 +108,12 @@ func (a *App) printUsage() {
 		),
 	)
 	fmt.Println(
-		"  squix tables           " + styles.Faint.Render("List database tables"),
+		"  squix explore          " + styles.Faint.Render(
+			"Explore database schema",
+		),
 	)
 	fmt.Println(
-		"  squix tables <table>   " + styles.Faint.Render(
+		"  squix explore <table>  " + styles.Faint.Render(
 			"Query a table directly",
 		),
 	)

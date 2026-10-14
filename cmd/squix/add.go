@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/editor"
 	"github.com/eduardofuncao/squix/internal/styles"
@@ -20,15 +19,7 @@ func (a *App) handleAdd() {
 		printError("No active connection.  Use 'squix switch <connection>' or 'squix init' first")
 	}
 
-	_, ok := a.config.Connections[a.config.CurrentConnection]
-	if !ok {
-		a.config.Connections[a.config.CurrentConnection] = &config.ConnectionYAML{}
-	}
-	conn := a.config.Connections[a.config.CurrentConnection]
-	if conn.Queries == nil {
-		conn.Queries = make(map[string]db.Query)
-	}
-	queries := conn.Queries
+	queries := a.config.QueriesFor(a.config.CurrentConnection)
 
 	queryName := os.Args[2]
 	var querySQL string
@@ -68,6 +59,5 @@ func (a *App) handleAdd() {
 		printError("Could not save configuration file: %v", err)
 	}
 
-	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Added query '%s' with ID %d", queryName, queries[queryName].Id)))
+	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Added query '%s'", queryName)))
 }
-

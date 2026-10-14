@@ -389,13 +389,13 @@ func (s *SQLServerConnection) GetViews() ([]string, error) {
 }
 
 func (s *SQLServerConnection) BuildUpdateStatement(tableName, columnName, currentValue, pkColumn, pkValue string) string {
-	quotedTableName := fmt.Sprintf("%s", tableName)
-	quotedColumnName := fmt.Sprintf("%s", columnName)
+	quotedTableName := tableName
+	quotedColumnName := columnName
 
 	escapedValue := strings.ReplaceAll(currentValue, "'", "''")
 
 	if pkColumn != "" && pkValue != "" {
-		quotedPkColumn := fmt.Sprintf("%s", pkColumn)
+		quotedPkColumn := pkColumn
 		escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
 		return fmt.Sprintf(
 			"-- SQL Server UPDATE statement\nUPDATE %s\nSET %s = '%s'\nWHERE %s = '%s';",
@@ -416,8 +416,8 @@ func (s *SQLServerConnection) BuildUpdateStatement(tableName, columnName, curren
 }
 
 func (s *SQLServerConnection) BuildDeleteStatement(tableName, primaryKeyCol, pkValue string) string {
-	quotedTableName := fmt.Sprintf("%s", tableName)
-	quotedPkColumn := fmt.Sprintf("%s", primaryKeyCol)
+	quotedTableName := tableName
+	quotedPkColumn := primaryKeyCol
 	escapedPkValue := strings.ReplaceAll(pkValue, "'", "''")
 
 	return fmt.Sprintf(

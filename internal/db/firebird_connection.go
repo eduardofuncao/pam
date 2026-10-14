@@ -66,8 +66,6 @@ func (f *FirebirdConnection) Query(queryName string, args ...any) (any, error) {
 		return nil, fmt.Errorf("query %s not found", queryName)
 	}
 
-	f.SetLastQuery(query)
-
 	return f.db.Query(query.SQL, args...)
 }
 

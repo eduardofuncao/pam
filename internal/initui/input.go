@@ -73,9 +73,10 @@ func (m InitInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursorIndex < fieldConnString {
 				m.cursorIndex++
 				// Update cursor position for the new field
-				if m.cursorIndex == fieldName {
+				switch m.cursorIndex {
+				case fieldName:
 					m.nameCursor = len(m.name)
-				} else if m.cursorIndex == fieldConnString {
+				case fieldConnString:
 					m.connCursor = len(m.connString)
 				}
 			}
@@ -84,23 +85,25 @@ func (m InitInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursorIndex > fieldName {
 				m.cursorIndex--
 				// Update cursor position for the new field
-				if m.cursorIndex == fieldName {
+				switch m.cursorIndex {
+				case fieldName:
 					m.nameCursor = len(m.name)
-				} else if m.cursorIndex == fieldConnString {
+				case fieldConnString:
 					m.connCursor = len(m.connString)
 				}
 			}
 
 		case "right":
 			// Cycle through db types when on type field
-			if m.cursorIndex == fieldType {
+			switch m.cursorIndex {
+			case fieldType:
 				m.cycleDbType(1)
-			} else if m.cursorIndex == fieldName {
+			case fieldName:
 				// Move cursor right within name field
 				if m.nameCursor < len(m.name) {
 					m.nameCursor++
 				}
-			} else if m.cursorIndex == fieldConnString {
+			case fieldConnString:
 				// Move cursor right within conn-string field
 				if m.connCursor < len(m.connString) {
 					m.connCursor++
@@ -109,14 +112,15 @@ func (m InitInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "left":
 			// Cycle through db types when on type field
-			if m.cursorIndex == fieldType {
+			switch m.cursorIndex {
+			case fieldType:
 				m.cycleDbType(-1)
-			} else if m.cursorIndex == fieldName {
+			case fieldName:
 				// Move cursor left within name field
 				if m.nameCursor > 0 {
 					m.nameCursor--
 				}
-			} else if m.cursorIndex == fieldConnString {
+			case fieldConnString:
 				// Move cursor left within conn-string field
 				if m.connCursor > 0 {
 					m.connCursor--

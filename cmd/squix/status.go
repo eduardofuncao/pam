@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/spinner"
 	"github.com/eduardofuncao/squix/internal/styles"
@@ -17,10 +16,7 @@ func (a *App) printConnStatus(conn db.DatabaseConnection) {
 		connInfo += fmt.Sprintf(" (schema: %s)", currConn.Schema)
 	}
 
-	queryCount := 0
-	if currConn.Queries != nil {
-		queryCount = len(currConn.Queries)
-	}
+	queryCount := len(a.config.QueriesFor(a.config.CurrentConnection))
 
 	interactive := spinner.Interactive()
 	if interactive {
@@ -41,15 +37,15 @@ func (a *App) printConnStatus(conn db.DatabaseConnection) {
 	var isReachable bool
 	select {
 	case isReachable = <-reachable:
-		close(done)
+		spinner.Stop(done)
 	case <-time.After(5 * time.Second):
-		close(done)
+		spinner.Stop(done)
 		isReachable = false
 	}
 
 	if interactive {
-		// Clear the spinner line + the provisional header above it.
-		fmt.Print("\r\033[2K")
+		// Clear the header line above the spinner (Stop already cleared the
+		// spinner line itself).
 		fmt.Print("\033[1A")
 		fmt.Print("\r\033[2K")
 	}
@@ -71,7 +67,7 @@ func (a *App) handleStatus() {
 		return
 	}
 
-	conn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
+	conn := a.config.LiveConnection(a.config.CurrentConnection)
 	conn.Open()
 	defer conn.Close()
 

@@ -49,27 +49,24 @@ func ExecuteSelect(sql, queryName string, params ExecutionParams) error {
 	// Execute the query with or without parameters
 	var err error
 	var rows any
-	if params.Args != nil && len(params.Args) > 0 {
+	if len(params.Args) > 0 {
 		rows, err = params.Connection.ExecQuery(sql, params.Args...)
 	} else {
 		rows, err = params.Connection.ExecQuery(sql)
 	}
 	if err != nil {
-		done <- struct{}{}
-		fmt.Print("\r\033[2K")
+		spinner.Stop(done)
 		return fmt.Errorf("query execution failed: %w", err)
 	}
 
 	// Format the results
 	columns, columnTypes, data, err := db.FormatTableDataWithTypes(rows.(*stdlib.Rows))
 	if err != nil {
-		done <- struct{}{}
-		fmt.Print("\r\033[2K")
+		spinner.Stop(done)
 		return fmt.Errorf("formatting failed: %w", err)
 	}
 
-	done <- struct{}{}
-	fmt.Print("\r\033[2K")
+	spinner.Stop(done)
 	elapsed := time.Since(start)
 	if len(data) == 0 {
 		fmt.Println("No results found")
@@ -121,13 +118,12 @@ func ExecuteNonSelect(params ExecutionParams) {
 
 	var result stdlib.Result
 	var err error
-	if params.Args != nil && len(params.Args) > 0 {
+	if len(params.Args) > 0 {
 		result, err = params.Connection.Exec(params.Query.SQL, params.Args...)
 	} else {
 		result, err = params.Connection.Exec(params.Query.SQL)
 	}
-	done <- struct{}{}
-	fmt.Print("\r\033[2K")
+	spinner.Stop(done)
 	elapsed := time.Since(start)
 
 	if err != nil {
@@ -171,7 +167,7 @@ func ExecuteExportWithOpenConn(params ExecutionParams, format string) error {
 	// Non-SELECT
 	start := time.Now()
 	var err error
-	if params.Args != nil && len(params.Args) > 0 {
+	if len(params.Args) > 0 {
 		_, err = params.Connection.Exec(params.Query.SQL, params.Args...)
 	} else {
 		_, err = params.Connection.Exec(params.Query.SQL)
@@ -200,7 +196,7 @@ func executeExportSelect(sql string, params ExecutionParams, format string) erro
 	// Execute query
 	var err error
 	var rows any
-	if params.Args != nil && len(params.Args) > 0 {
+	if len(params.Args) > 0 {
 		rows, err = params.Connection.ExecQuery(sql, params.Args...)
 	} else {
 		rows, err = params.Connection.ExecQuery(sql)

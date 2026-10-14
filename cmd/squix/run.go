@@ -17,7 +17,7 @@ func (a *App) handleRun() {
 		printError("No active connection.   Use 'squix switch <connection>' or 'squix init' first")
 	}
 
-	conn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
+	conn := a.config.LiveConnection(a.config.CurrentConnection)
 	args := os.Args[2:]
 
 	// Check for empty args → open editor for new query (CLI-only feature)
@@ -37,7 +37,7 @@ func (a *App) handleRun() {
 func (a *App) runFromArgs(args []string, conn db.DatabaseConnection) error {
 	flags := parseRunFlagsFrom(args)
 
-	resolved, err := run.ResolveQuery(flags, a.config, a.config.CurrentConnection, conn)
+	resolved, err := run.ResolveQuery(flags, a.config.CurrentConnection, conn)
 	if err != nil {
 		return err
 	}
@@ -227,11 +227,6 @@ func (a *App) createNewQueryOrEdit() db.Query {
 		printError("Empty SQL, cancelled")
 	}
 
-	// Persist before execution so the SQL survives a syntax failure or a TUI quit-without-save.
-	if serr := config.SaveLastQuery(editedSQL); serr != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not save last-query: %v\n", serr)
-	}
-
 	return db.Query{Name: "<runtime>", SQL: editedSQL, Id: -1}
 }
 
@@ -253,8 +248,7 @@ func (a *App) saveIfNeeded(resolved run.ResolvedQuery) {
 		return
 	}
 
-	// Save the query and update last query
-	if err := a.config.SaveQueryAndLast(a.config.CurrentConnection, resolved.Query, true); err != nil {
+	if _, err := a.config.SaveQueryToConnection(a.config.CurrentConnection, resolved.Query); err != nil {
 		printError("Failed to save query: %v", err)
 	}
 }
@@ -262,6 +256,12 @@ func (a *App) saveIfNeeded(resolved run.ResolvedQuery) {
 type executorFunc func(run.ExecutionParams) error
 
 func (a *App) executeQueryWithParamsInternal(query db.Query, conn db.DatabaseConnection, paramFlags, positionalArgs map[string]string, executor executorFunc, noInteractive bool, flags run.Flags) error {
+	// Record the last-run SQL before execution so `squix run --last` and the
+	// editor pre-fill both read it. Template form (with :param placeholders) so
+	// --last re-prompts for params. Survives syntax failures and TUI quits.
+	if serr := config.SaveLastQuery(query.SQL); serr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not save last-query: %v\n", serr)
+	}
 	sql, args, displaySQL, err := a.processParameters(query.SQL, conn, paramFlags, positionalArgs, noInteractive)
 	if err != nil {
 		return err
@@ -430,11 +430,6 @@ func (a *App) saveQueryFromTable(query db.Query) (db.Query, error) {
 	// Save query with auto-ID generation
 	savedQuery, err := a.config.SaveQueryToConnection(connName, query)
 	if err != nil {
-		return db.Query{}, err
-	}
-
-	// Update last query
-	if err := a.config.UpdateLastQuery(connName, savedQuery); err != nil {
 		return db.Query{}, err
 	}
 

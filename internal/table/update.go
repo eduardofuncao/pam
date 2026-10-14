@@ -140,12 +140,6 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.startExportAllFormatSelection()
 
 		case config.ActionEnter:
-			if m.isTablesList {
-				if m.selectedRow >= 0 && m.selectedRow < m.numRows() {
-					m.selectedTableName = m.data[m.selectedRow][0]
-					return m, tea.Quit
-				}
-			}
 			return m.showDetailView(), nil
 
 		case config.ActionUpdate:

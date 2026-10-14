@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/parser"
 	"github.com/eduardofuncao/squix/internal/styles"
@@ -62,27 +63,32 @@ func (a *App) renderList(objectType string, flags listFlags) {
 			return
 		}
 		for name, connection := range a.config.Connections {
-			marker := "◆"
+			var marker string
 			if name == a.config.CurrentConnection {
 				marker = styles.Success.Render("●")
 			} else {
 				marker = styles.Faint.Render("◆")
 			}
-			fmt.Printf("%s %s %s\n", marker, styles.Title.Render(name), styles.Faint.Render(fmt.Sprintf("(%s)", connection.DBType)))
+			line := fmt.Sprintf("%s %s %s", marker, styles.Title.Render(name), styles.Faint.Render(fmt.Sprintf("(%s)", connection.DBType)))
+			// For {service}:{env} names, show the shared group key faintly.
+			if key := config.QueryGroupKey(name); key != name {
+				line += " " + styles.Faint.Render(key)
+			}
+			fmt.Println(line)
 		}
 
 	case "queries":
 		if a.config.CurrentConnection == "" {
 			printError("No active connection.  Use 'squix switch <connection>' or 'squix init' first")
 		}
-		conn := a.config.Connections[a.config.CurrentConnection]
-		if len(conn.Queries) == 0 {
+		queries := a.config.QueriesFor(a.config.CurrentConnection)
+		if len(queries) == 0 {
 			fmt.Println(styles.Faint.Render("No queries saved"))
 			return
 		}
 
-		queryList := make([]db.Query, 0, len(conn.Queries))
-		for _, query := range conn.Queries {
+		queryList := make([]db.Query, 0, len(queries))
+		for _, query := range queries {
 			if flags.searchTerm == "" {
 				queryList = append(queryList, query)
 				continue

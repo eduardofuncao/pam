@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/params"
 	"github.com/eduardofuncao/squix/internal/run"
@@ -18,7 +17,7 @@ func (a *App) handleShell() {
 		printError("No active connection.   Use 'squix switch <connection>' or 'squix init' first")
 	}
 
-	conn := config.FromConnectionYaml(a.config.Connections[a.config.CurrentConnection])
+	conn := a.config.LiveConnection(a.config.CurrentConnection)
 	var err error
 	if err = conn.Open(); err != nil {
 		printError("Could not open connection: %v", err)
@@ -133,8 +132,8 @@ func (a *App) executeReplLine(rl *readline.Instance, conn db.DatabaseConnection,
 		case "list", "ls", "\\l":
 			a.handleListWithArgs(tokens[1:])
 			return false
-		case "tables", "\\dt":
-			a.handleReplTables(conn, tokens[1:])
+		case "explore", "tables", "\\dt":
+			a.handleReplExplore(conn, tokens[1:])
 			return false
 		}
 	}
@@ -190,7 +189,7 @@ func parseInput(input string) []string {
 func (a *App) runFromArgsOpenConn(args []string, conn db.DatabaseConnection) error {
 	flags := parseRunFlagsFrom(args)
 
-	resolved, err := run.ResolveQuery(flags, a.config, a.config.CurrentConnection, conn)
+	resolved, err := run.ResolveQuery(flags, a.config.CurrentConnection, conn)
 	if err != nil {
 		return err
 	}
@@ -229,7 +228,7 @@ func shellHelpText() string {
 	sb.WriteString("  help, \\h             Show this help\n")
 	sb.WriteString("  status               Show connection info\n")
 	sb.WriteString("  list, ls, \\l         List saved queries or connections\n")
-	sb.WriteString("  tables, \\dt [name]  List tables or view table data\n")
+	sb.WriteString("  explore, \\dt [name]  Open schema explorer or view table data\n")
 	sb.WriteString("\n")
 	sb.WriteString(styles.Title.Render("Query Execution"))
 	sb.WriteString("\n")

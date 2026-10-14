@@ -114,6 +114,39 @@ func (e *TestEnv) SeedDefaults() {
 	e.SeedData(DefaultSchema, DefaultInserts)
 }
 
+// WriteConfig overwrites config.yaml in the env's config dir with the given YAML.
+func (e *TestEnv) WriteConfig(yaml string) {
+	e.t.Helper()
+	path := filepath.Join(e.HomeDir, ".config", "squix", "config.yaml")
+	if err := os.WriteFile(path, []byte(yaml), 0644); err != nil {
+		e.t.Fatalf("write config: %v", err)
+	}
+}
+
+// SeedDB creates a sqlite database at path and seeds it with the default schema
+// and inserts. Used to give multiple {service}:{env} connections distinct files.
+func (e *TestEnv) SeedDB(path string) {
+	e.t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		e.t.Fatalf("open sqlite: %v", err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(DefaultSchema); err != nil {
+		e.t.Fatalf("exec schema: %v", err)
+	}
+	for _, ins := range DefaultInserts {
+		if _, err := db.Exec(ins); err != nil {
+			e.t.Fatalf("exec insert: %v\n%s", err, ins)
+		}
+	}
+}
+
+// NewDBPath returns a unique sqlite file path under the test's temp dir.
+func (e *TestEnv) NewDBPath(name string) string {
+	return filepath.Join(e.t.TempDir(), name)
+}
+
 func (e *TestEnv) RunSquix(args ...string) (stdout, stderr string, exitCode int) {
 	e.t.Helper()
 

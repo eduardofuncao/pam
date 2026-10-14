@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/eduardofuncao/squix/internal/config"
 	"github.com/eduardofuncao/squix/internal/db"
 	"github.com/eduardofuncao/squix/internal/styles"
 )
@@ -34,15 +35,14 @@ func (a *App) handleRemove() {
 	}
 
 	// Otherwise, remove query (original behavior)
-	conn := a.config.Connections[a.config.CurrentConnection]
-	queries := conn.Queries
+	queries := a.config.QueriesFor(a.config.CurrentConnection)
 
 	query, exists := db.FindQueryWithSelector(queries, os.Args[2])
 	if !exists {
 		printError("Query '%s' could not be found", os.Args[2])
 	}
 
-	delete(conn.Queries, query.Name)
+	delete(queries, query.Name)
 
 	err := a.config.Save()
 	if err != nil {
@@ -53,15 +53,16 @@ func (a *App) handleRemove() {
 }
 
 func (a *App) removeConnection(connName string) {
-	conn, exists := a.config.Connections[connName]
-	if !exists {
+	if _, exists := a.config.Connections[connName]; !exists {
 		printError("Connection '%s' does not exist", connName)
 		return
 	}
 
-	queryCount := len(conn.Queries)
+	key := config.GroupKey(connName)
+	queryCount := len(a.config.QueriesFor(connName))
+	hasSiblings := a.config.GroupHasOtherMembers(key, connName)
 
-	if !a.confirmDeletion(connName, queryCount) {
+	if !a.confirmConnectionDeletion(connName, key, queryCount, hasSiblings) {
 		fmt.Println(styles.Faint.Render("Aborted"))
 		return
 	}
@@ -71,6 +72,14 @@ func (a *App) removeConnection(connName string) {
 	}
 
 	delete(a.config.Connections, connName)
+	// Drop the shared library only if no other connection still derives it.
+	if !hasSiblings {
+		delete(a.config.QueryGroups, key)
+		// Remove the on-disk file too (only place group files are deleted).
+		if err := os.Remove(config.GroupFile(key)); err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "squix: could not remove %s: %v\n", config.GroupFile(key), err)
+		}
+	}
 
 	err := a.config.Save()
 	if err != nil {
@@ -78,12 +87,22 @@ func (a *App) removeConnection(connName string) {
 		return
 	}
 
-	fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Removed connection '%s' and %d queries", connName, queryCount)))
+	if hasSiblings {
+		fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Removed connection '%s' (group '%s' kept: %d queries shared with other connections)", connName, key, queryCount)))
+	} else {
+		fmt.Println(styles.Success.Render(fmt.Sprintf("✓ Removed connection '%s' and %d queries", connName, queryCount)))
+	}
 }
 
-func (a *App) confirmDeletion(connName string, queryCount int) bool {
+func (a *App) confirmConnectionDeletion(connName, groupKey string, queryCount int, hasSiblings bool) bool {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(styles.Error.Render(fmt.Sprintf("This will delete connection '%s' and its %d queries. Continue? [y/N]: ", connName, queryCount)))
+	var prompt string
+	if hasSiblings {
+		prompt = fmt.Sprintf("This will delete connection '%s'. Its query group '%s' (%d queries) stays shared with other connections. Continue? [y/N]: ", connName, groupKey, queryCount)
+	} else {
+		prompt = fmt.Sprintf("This will delete connection '%s' and its %d queries. Continue? [y/N]: ", connName, queryCount)
+	}
+	fmt.Print(styles.Error.Render(prompt))
 
 	response, err := reader.ReadString('\n')
 	if err != nil {

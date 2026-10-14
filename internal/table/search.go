@@ -18,11 +18,30 @@ func shouldUseCaseSensitive(query string) bool {
 	return false
 }
 
+// cellMatchProgress and colMatchProgress returns the 1-based
+// position of the match the cursor last landed on
+func (m Model) cellMatchProgress() (current, total int) {
+	total = len(m.searchMatches)
+	if total == 0 {
+		return 0, 0
+	}
+	return m.cellMatchIdx + 1, total
+}
+
+func (m Model) colMatchProgress() (current, total int) {
+	total = len(m.searchColMatches)
+	if total == 0 {
+		return 0, 0
+	}
+	return m.colMatchIdx + 1, total
+}
+
 func (m Model) startCellSearch() Model {
 	m.searchMode = true
 	m.columnSearchMode = false
 	m.searchQuery = ""
 	m.searchMatches = []CellPosition{}
+	m.cellMatchIdx = 0
 	m.searchCursor = 0
 	return m
 }
@@ -32,6 +51,7 @@ func (m Model) startColumnSearch() Model {
 	m.columnSearchMode = true
 	m.searchQuery = ""
 	m.searchColMatches = []int{}
+	m.colMatchIdx = 0
 	m.searchCursor = 0
 	return m
 }
@@ -127,10 +147,11 @@ func (m Model) searchCells() Model {
 
 	if len(m.searchMatches) > 0 {
 		found := false
-		for _, match := range m.searchMatches {
+		for i, match := range m.searchMatches {
 			if match.Row > m.selectedRow || (match.Row == m.selectedRow && match.Col > m.selectedCol) {
 				m.selectedRow = match.Row
 				m.selectedCol = match.Col
+				m.cellMatchIdx = i
 				found = true
 				break
 			}
@@ -140,6 +161,7 @@ func (m Model) searchCells() Model {
 			firstMatch := m.searchMatches[0]
 			m.selectedRow = firstMatch.Row
 			m.selectedCol = firstMatch.Col
+			m.cellMatchIdx = 0
 		}
 
 		if m.selectedRow < m.offsetY {
@@ -179,9 +201,10 @@ func (m Model) searchColumnHeaders() Model {
 
 	if len(m.searchColMatches) > 0 {
 		found := false
-		for _, matchCol := range m.searchColMatches {
+		for i, matchCol := range m.searchColMatches {
 			if matchCol > m.selectedCol {
 				m.selectedCol = matchCol
+				m.colMatchIdx = i
 				found = true
 				break
 			}
@@ -189,6 +212,7 @@ func (m Model) searchColumnHeaders() Model {
 
 		if !found {
 			m.selectedCol = m.searchColMatches[0]
+			m.colMatchIdx = 0
 		}
 
 		if m.selectedCol < m.offsetX {
@@ -208,6 +232,8 @@ func (m Model) clearSearch() Model {
 	m.searchQuery = ""
 	m.searchMatches = []CellPosition{}
 	m.searchColMatches = []int{}
+	m.cellMatchIdx = 0
+	m.colMatchIdx = 0
 	return m
 }
 
@@ -216,10 +242,11 @@ func (m Model) nextSearchMatch() Model {
 		return m
 	}
 
-	for _, match := range m.searchMatches {
+	for i, match := range m.searchMatches {
 		if match.Row > m.selectedRow || (match.Row == m.selectedRow && match.Col > m.selectedCol) {
 			m.selectedRow = match.Row
 			m.selectedCol = match.Col
+			m.cellMatchIdx = i
 
 			if m.selectedRow < m.offsetY {
 				m.offsetY = m.selectedRow
@@ -240,6 +267,7 @@ func (m Model) nextSearchMatch() Model {
 	firstMatch := m.searchMatches[0]
 	m.selectedRow = firstMatch.Row
 	m.selectedCol = firstMatch.Col
+	m.cellMatchIdx = 0
 
 	if m.selectedRow < m.offsetY {
 		m.offsetY = m.selectedRow
@@ -267,6 +295,7 @@ func (m Model) prevSearchMatch() Model {
 		if match.Row < m.selectedRow || (match.Row == m.selectedRow && match.Col < m.selectedCol) {
 			m.selectedRow = match.Row
 			m.selectedCol = match.Col
+			m.cellMatchIdx = i
 
 			if m.selectedRow < m.offsetY {
 				m.offsetY = m.selectedRow
@@ -287,6 +316,7 @@ func (m Model) prevSearchMatch() Model {
 	lastMatch := m.searchMatches[len(m.searchMatches)-1]
 	m.selectedRow = lastMatch.Row
 	m.selectedCol = lastMatch.Col
+	m.cellMatchIdx = len(m.searchMatches) - 1
 
 	if m.selectedRow < m.offsetY {
 		m.offsetY = m.selectedRow
@@ -309,9 +339,10 @@ func (m Model) nextColumnMatch() Model {
 		return m
 	}
 
-	for _, matchCol := range m.searchColMatches {
+	for i, matchCol := range m.searchColMatches {
 		if matchCol > m.selectedCol {
 			m.selectedCol = matchCol
+			m.colMatchIdx = i
 
 			if m.selectedCol < m.offsetX {
 				m.offsetX = m.selectedCol
@@ -324,6 +355,7 @@ func (m Model) nextColumnMatch() Model {
 	}
 
 	m.selectedCol = m.searchColMatches[0]
+	m.colMatchIdx = 0
 
 	if m.selectedCol < m.offsetX {
 		m.offsetX = m.selectedCol
@@ -344,6 +376,7 @@ func (m Model) prevColumnMatch() Model {
 		matchCol := m.searchColMatches[i]
 		if matchCol < m.selectedCol {
 			m.selectedCol = matchCol
+			m.colMatchIdx = i
 
 			if m.selectedCol < m.offsetX {
 				m.offsetX = m.selectedCol
@@ -356,6 +389,7 @@ func (m Model) prevColumnMatch() Model {
 	}
 
 	m.selectedCol = m.searchColMatches[len(m.searchColMatches)-1]
+	m.colMatchIdx = len(m.searchColMatches) - 1
 
 	if m.selectedCol < m.offsetX {
 		m.offsetX = m.selectedCol

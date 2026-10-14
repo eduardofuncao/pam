@@ -112,9 +112,7 @@ func (d *DuckDBConnection) GetTableMetadata(tableName string) (*TableMetadata, e
 		for pkRows.Next() {
 			var colNames string
 			if err := pkRows.Scan(&colNames); err == nil {
-				for _, pk := range parseDuckDBArray(colNames) {
-					metadata.PrimaryKeys = append(metadata.PrimaryKeys, pk)
-				}
+				metadata.PrimaryKeys = append(metadata.PrimaryKeys, parseDuckDBArray(colNames)...)
 			}
 		}
 	}

@@ -44,7 +44,7 @@
 - **In-Place Editing** - Update cells, delete rows and edit your SQL directly from the results table
 - **Export your data** - Export your data as CSV, JSON, SQL, Markdown or HTML tables
 - **Connection Switching** - Manage multiple databases and switch whenever you want
-- **Database Exploration** - Browse schema, visualize foreign key relationships
+- **Database Exploration** - Interactive schema explorer with search and foldable sections, plus foreign-key relationship trees
 - **Interactive Shell** - REPL with history, multi-line, and meta-commands
 
 See [Features](docs/features.md) for details and examples
@@ -290,6 +290,8 @@ See [Shell Completion](docs/completion.md)
 
 Row limits, column widths, color schemes (`dracula`, `gruvbox`, `catppuccin-mocha`, etc.) and UI visibility options can be set through the config file at `~/.config/squix/config.yaml`.
 
+Connections named `{service}:{env}` (e.g. `ecommerce:dev`, `ecommerce:prod`) share one saved-query library — add a query once, run it on any sibling environment. See [Shared query libraries](docs/configuration.md#shared-query-libraries).
+
 See [Configuration](docs/configuration.md)
 
 ---
@@ -345,7 +347,7 @@ as part of your workflow.
 - [x] Move saved configs from top level yaml file to per-connection sql files
 - [x] Display counters for selected lines and search results
 - [x] Allow different connections to share query collection (eg. dev, stg, prod)
-- [ ] Rework database exploration commands
+- [x] Rework database exploration commands
 - [ ] Option to encrypt sensitive data in the config file
 
 ---

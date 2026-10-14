@@ -5,15 +5,25 @@ import (
 	"os"
 	"time"
 
-	isatty "github.com/mattn/go-isatty"
 	"github.com/eduardofuncao/squix/internal/styles"
+	isatty "github.com/mattn/go-isatty"
 )
 
-// Interactive reports whether stdout is a terminal. When false (e.g. piped to
-// an editor or CI), spinner frames and cursor-control escapes would land as
-// literal garbage in the captured output, so animation and erasure are skipped.
 func Interactive() bool {
 	return isatty.IsTerminal(os.Stdout.Fd())
+}
+
+var Stages = []string{" ", ".", "o", "O", "@", "*"}
+
+// TickInterval is how often spinner frames advance.
+const TickInterval = 100 * time.Millisecond
+
+// Stop signals the spinner goroutine to exit and erases its line
+func Stop(done chan struct{}) {
+	close(done)
+	if Interactive() {
+		fmt.Print("\r\033[2K")
+	}
 }
 
 func Wait(done chan struct{}) {
@@ -42,16 +52,14 @@ func CircleWait(done chan struct{}) {
 		<-done
 		return
 	}
-	// Custom pulsing animation
-	stages := []string{" ", ".", "o", "O", "@", "*"}
 	for {
-		for _, s := range stages {
+		for _, s := range Stages {
 			select {
 			case <-done:
 				return
 			default:
 				fmt.Printf("\r%s Checking...", styles.Success.Render(s))
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(TickInterval)
 			}
 		}
 	}
@@ -62,18 +70,16 @@ func CircleWaitWithTimer(done chan struct{}) {
 		<-done
 		return
 	}
-	// Custom pulsing animation with timer
-	stages := []string{" ", ".", "o", "O", "@", "*"}
 	var passed time.Duration = 0
 	for {
-		for _, s := range stages {
+		for _, s := range Stages {
 			select {
 			case <-done:
 				return
 			default:
 				fmt.Printf("\r%s %.2fs", styles.Success.Render(s), passed.Seconds())
-				passed += 100 * time.Millisecond
-				time.Sleep(100 * time.Millisecond)
+				passed += TickInterval
+				time.Sleep(TickInterval)
 			}
 		}
 	}

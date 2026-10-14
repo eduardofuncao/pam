@@ -134,14 +134,8 @@ func (m Model) handleSaveQueryComplete(msg saveQueryCompleteMsg) (tea.Model, tea
 }
 
 func (m Model) isNamedQuery() bool {
-	// Check if the query name indicates it's a saved query
-	// Named queries are NOT: <inline>, <edited>, <runtime>, info commands
 	name := m.currentQuery.Name
 	if name == "<inline>" || name == "<edited>" || name == "<runtime>" {
-		return false
-	}
-	// Info commands start with "info "
-	if len(name) >= 4 && name[:4] == "info " {
 		return false
 	}
 	// If it has a valid ID and name, it's a saved query

@@ -204,10 +204,13 @@ func (m Model) renderFooter() string {
 		displayValue := formatFooterPreview(currentCellValue, maxPreviewWidth)
 
 		modeIndicator := ""
-		if m.visualLineMode {
-			modeIndicator = styles.SearchMatch.Render("-- V-LINE -- ")
-		} else if m.visualMode {
-			modeIndicator = styles.SearchMatch.Render("-- VISUAL -- ")
+		if m.visualLineMode || m.visualMode {
+			minR, maxR, minC, maxC := m.getSelectionBounds()
+			label := "VISUAL"
+			if m.visualLineMode {
+				label = "V-LINE"
+			}
+			modeIndicator = styles.SearchMatch.Render(fmt.Sprintf("-- %s %dx%d -- ", label, maxR-minR+1, maxC-minC+1))
 		}
 		cellPreview = fmt.Sprintf("%s%s%s %s\n",
 			modeIndicator,
@@ -222,8 +225,16 @@ func (m Model) renderFooter() string {
 		statsInfo = fmt.Sprintf("%s | %s | %s",
 			styles.Faint.Render(fmt.Sprintf("%dx%d", m.numRows(), m.numCols())),
 			styles.Faint.Render(fmt.Sprintf("In %.2fs", m.elapsed.Seconds())),
-			styles.Faint.Render(fmt.Sprintf("[%d/%d]", m.selectedRow+1, m.selectedCol+1)),
+			styles.Faint.Render(fmt.Sprintf("%d,%d", m.selectedRow+1, m.selectedCol+1)),
 		)
+		switch {
+		case !m.columnSearchMode && len(m.searchMatches) > 0:
+			cur, tot := m.cellMatchProgress()
+			statsInfo += " | " + styles.Faint.Render(matchLabel(cur, tot))
+		case m.columnSearchMode && len(m.searchColMatches) > 0:
+			cur, tot := m.colMatchProgress()
+			statsInfo += " | " + styles.Faint.Render(matchLabel(cur, tot))
+		}
 	}
 
 	// Build keymaps info (conditional)
@@ -248,6 +259,10 @@ func (m Model) renderFooter() string {
 
 	// Assemble footer from conditional parts
 	return fmt.Sprintf("\n%s%s%s", cellPreview, statsInfo, keymapsInfo)
+}
+
+func matchLabel(cur, tot int) string {
+	return fmt.Sprintf("[%d/%d]", cur, tot)
 }
 
 func (m Model) getCellStyle(row, col int) lipgloss.Style {
@@ -448,14 +463,7 @@ func (m Model) renderHelpOverlay() string {
 	}
 
 	// Context adjustments
-	if m.isTablesList {
-		categories[2].binds = []keyBind{
-			{km.DisplayKeys(config.ActionYank), "Yank (copy) selection"},
-			{km.DisplayKeys(config.ActionExport), "Export selected cells"},
-			{km.DisplayKeys(config.ActionExportAll), "Export all rows"},
-			{km.DisplayKeys(config.ActionEnter), "Select table"},
-		}
-	} else if m.tableName == "" {
+	if m.tableName == "" {
 		categories[2].binds = []keyBind{
 			{km.DisplayKeys(config.ActionYank), "Yank (copy) selection"},
 			{km.DisplayKeys(config.ActionExport), "Export selected cells"},

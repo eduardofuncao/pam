@@ -26,7 +26,7 @@ func newMockConn(placeholder string) db.DatabaseConnection {
 // needed because BaseConnection.Query returns wrong error message
 func (m *mockConn) Query(string, ...any) (any, error)                  { return nil, nil }
 func (m *mockConn) ExecQuery(string, ...any) (*sql.Rows, error)        { return nil, nil }
-func (m *mockConn) Exec(string, ...any) (sql.Result, error)              { return nil, nil }
+func (m *mockConn) Exec(string, ...any) (sql.Result, error)            { return nil, nil }
 func (m *mockConn) Open() error                                        { return nil }
 func (m *mockConn) Ping() error                                        { return nil }
 func (m *mockConn) Close() error                                       { return nil }

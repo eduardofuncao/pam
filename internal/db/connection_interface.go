@@ -28,9 +28,7 @@ type DatabaseConnection interface {
 	GetConnString() string
 	GetSchema() string
 	GetQueries() map[string]Query
-	GetLastQuery() Query
 
 	SetSchema(string)
-	SetLastQuery(Query)
 	SetQueries(map[string]Query)
 }

@@ -48,11 +48,10 @@ After installation, press TAB to autocomplete:
 squix [TAB]              # List all commands
 squix run [TAB]          # List queries from current connection
 squix switch [TAB]       # List connection names
-squix info [TAB]         # List: table, view
 squix list [TAB]         # List: queries
 squix edit [TAB]         # List queries to edit
 ```
 
-**Note:** Query completion only shows queries from your current connection. Use `squix switch <connection>` to change connections.
+**Note:** Query completion draws from your current connection's query library — shared across `{service}:{env}` siblings (e.g. `ecommerce:dev`, `ecommerce:prod` share one library). Use `squix switch <connection>` to change connections.
 
 > Currently unreleased, build from source to make this available

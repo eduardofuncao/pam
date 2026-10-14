@@ -94,11 +94,8 @@ func getCompletions(args []string, cfg *config.Config) []string {
 		result := []string{"queries", "connections"}
 		result = append(result, getCurrentConnectionQueries(cfg)...)
 		return result
-	case "info":
-		if len(args) >= 2 {
-			return []string{"table", "view"}
-		}
-		return []string{"table", "view"}
+	case "explore":
+		return []string{"--oneline", "--tables", "--views"}
 	case "edit", "delete", "rm", "remove":
 		return getCurrentConnectionQueries(cfg)
 	case "--connection", "-c":
@@ -123,13 +120,10 @@ func getSubcommands() []string {
 		"list",
 		"ls",
 		"edit",
-		"info",
 		"explore",
 		"status",
 		"test",
 		"history",
-		"tables",
-		"t",
 		"disconnect",
 		"clear",
 		"unset",
@@ -154,13 +148,12 @@ func getCurrentConnectionQueries(cfg *config.Config) []string {
 		return []string{}
 	}
 
-	conn, exists := cfg.Connections[cfg.CurrentConnection]
-	if !exists {
+	if _, exists := cfg.Connections[cfg.CurrentConnection]; !exists {
 		return []string{}
 	}
 
 	var names []string
-	for name := range conn.Queries {
+	for name := range cfg.QueriesFor(cfg.CurrentConnection) {
 		names = append(names, name)
 	}
 	sort.Strings(names)
